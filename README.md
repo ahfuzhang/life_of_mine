@@ -11,3 +11,4 @@ ahfuzhang, 阿福<br/>
   《听张富春讲多核编程》   https://ke.qq.com/course/192009<br/>
   《跟腾讯架构大师学：网络框架与后台架构》   https://ke.qq.com/course/213315<br/>
   
+旧的博客地址：http://ahfuzhang.blogspot.com
