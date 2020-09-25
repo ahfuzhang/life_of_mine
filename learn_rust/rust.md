@@ -1513,6 +1513,71 @@ pub fn notify(item: impl Summary) {
 }
 ```
 * 这个与虚函数有什么不同？
+* 这个类似多态的效果，是编译期决定，还是运行期决定？
+* 父类的指针，指向子类的对象，行不行？
+* 静态分发与动态分发
+
+### 默认实现
+```
+pub trait Summary {
+    fn summarize(&self) -> String;
+}
+
+pub trait Summary {
+    fn summarize(&self) -> String {
+        String::from("(Read more...)")
+    }
+}
+```
+
+### Trait Bound 语法
+等同于 trait作为参数
+```
+pub fn notify<T: Summary>(item: T) {
+    println!("Breaking news! {}", item.summarize());
+}
+```
+
+### 通过 + 指定多个 trait bound
+```
+pub fn notify(item: impl Summary + Display) {
+}
+```
+* 也适合泛型的语法
+```
+pub fn notify<T: Summary + Display>(item: T) {
+
+}
+```
+### 通过 where 简化 trait bound
+```
+然而，使用过多的 trait bound 也有缺点。每个泛型有其自己的 trait bound，所以有多个泛型参数的函数在名称和参数列表之间会有很长的 trait bound 信息，这使得函数签名难以阅读。为此，Rust 有另一个在函数签名之后的 where 从句中指定 trait bound 的语法。所以除了这么写：
+
+
+fn some_function<T: Display + Clone, U: Clone + Debug>(t: T, u: U) -> i32 {
+还可以像这样使用 where 从句：
+
+
+fn some_function<T, U>(t: T, u: U) -> i32
+    where T: Display + Clone,
+          U: Clone + Debug
+{
+这个函数签名就显得不那么杂乱，函数名、参数列表和返回值类型都离得很近，看起来类似没有很多 trait bounds 的函数。
+```
+
+### 返回实现了 trait 的类型
+
+```
+fn returns_summarizable() -> impl Summary {
+    Tweet {
+        username: String::from("horse_ebooks"),
+        content: String::from("of course, as you probably already know, people"),
+        reply: false,
+        retweet: false,
+    }
+}
+```
+
 
 
 # 生命期
@@ -1524,6 +1589,8 @@ pub fn notify(item: impl Summary) {
 &'a i32     // 含有生命周期注释的引用
 &'a mut i32 // 可变型含有生命周期注释的引用
 ```
+
+* 为什么编译期不能自动检查出生命周期，而需要开发自己去定义？
 
 # 库
 
@@ -1747,6 +1814,9 @@ Rust会为每个crate都自动引入标准库模块，除非使用＃[no_std]属
 * rust必然替换C++
 * rust适合写内存安全的系统程序
 * 如果不担心垃圾收集影响性能，如果不是开发系统级别的应用，何必用rust? golang足矣！
-
-
+* rust替换C++，还有哪些障碍？
+   * 如何通过不安全代码的方式，把某些安全检查去掉，从而提升性能（特别是数组的边界检查）
+   * 大量的C++的代码遗产，如何继承
+   * 交叉编译，支持更多平台
+   * 汇编、SIMD、CPU cache line对齐，原子操作指令等，与CPU架构高度match，提升性能
 
