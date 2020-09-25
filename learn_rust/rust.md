@@ -103,6 +103,16 @@ Rust语言主要由以下几个核心部件组成：· 语言规范· 编译器�
 ### 谁申请谁释放的原则
 ### 对非POD对象memset为0
 ### 使用未初始化的变量（特别是指针）
+### vector容量增长带来的问题：
+```
+int main(){
+    std::vector<int> v{1};  //这个时候容量为1
+    int* ptr = &v[0];
+    v.push_back(2);  //释放掉原来的空间，重新分配
+    printf("%d\n", *ptr);  //这个时候指针已经无效
+}
+```
+
 
 ```
 · 引用空指针。· 使用未初始化内存。· 释放后使用，也就是使用悬垂指针。· 缓冲区溢出，比如数组越界。· 非法释放已经释放过的指针或未分配的指针，也就是重复释放。
@@ -245,8 +255,21 @@ let origin = Point(0, 0, 0);
 我们也可以定义一个没有任何字段的结构体！它们被称为 类单元结构体（unit-like structs）因为它们类似于 ()，即 unit 类型。类单元结构体常常在你想要在某个类型上实现 trait 但不需要在类型中存储数据的时候发挥作用。
 
 ## 2.6 枚举
+* 枚举允许你通过列举可能的 成员（variants） 来定义一个类型。
+* 一个特别有用的枚举，叫做 Option，它代表一个值要么是某个值要么什么都不是。
+* match 表达式中用模式匹配，针对不同的枚举值编写相应要执行的代码。
 
+### 定义枚举
+```
+enum IpAddrKind {
+    V4,
+    V6,
+}
 
+//枚举赋值
+let four = IpAddrKind::V4;
+let six = IpAddrKind::V6;
+```
 
 ## 2.7 string类型
 * string类型被分配到堆上
@@ -517,6 +540,7 @@ let user2 = User {
 
 ### 方法
 * 相当于类的成员函数
+impl 块的另一个有用的功能是：允许在 impl 块中定义 不 以 self 作为参数的函数。这被称为 关联函数（associated functions），因为它们与结构体相关联。它们仍是函数而不是方法，因为它们并不作用于一个结构体的实例。
 
 ```
 #[derive(Debug)]
@@ -579,6 +603,57 @@ impl Rectangle {
 }
 ```
 
+### 成员可见性
+see: https://doc.rust-lang.org/reference/visibility-and-privacy.html
+```
+pub mod outer_mod {
+    pub mod inner_mod {
+        // This function is visible within `outer_mod`
+        pub(in crate::outer_mod) fn outer_mod_visible_fn() {}
+        // Same as above, this is only valid in the 2015 edition.
+        pub(in outer_mod) fn outer_mod_visible_fn_2015() {}
+
+        // This function is visible to the entire crate
+        pub(crate) fn crate_visible_fn() {}
+
+        // This function is visible within `outer_mod`
+        pub(super) fn super_mod_visible_fn() {
+            // This function is visible since we're in the same `mod`
+            inner_mod_visible_fn();
+        }
+
+        // This function is visible only within `inner_mod`,
+        // which is the same as leaving it private.
+        pub(self) fn inner_mod_visible_fn() {}
+    }
+    pub fn foo() {
+        inner_mod::outer_mod_visible_fn();
+        inner_mod::crate_visible_fn();
+        inner_mod::super_mod_visible_fn();
+
+        // This function is no longer visible since we're outside of `inner_mod`
+        // Error! `inner_mod_visible_fn` is private
+        //inner_mod::inner_mod_visible_fn();
+    }
+}
+
+fn bar() {
+    // This function is still visible since we're in the same crate
+    outer_mod::inner_mod::crate_visible_fn();
+
+    // This function is no longer visible since we're outside of `outer_mod`
+    // Error! `super_mod_visible_fn` is private
+    //outer_mod::inner_mod::super_mod_visible_fn();
+
+    // This function is no longer visible since we're outside of `outer_mod`
+    // Error! `outer_mod_visible_fn` is private
+    //outer_mod::inner_mod::outer_mod_visible_fn();
+
+    outer_mod::foo();
+}
+
+fn main() { bar() }
+```
 
 # 3.常量
 ## 3.1 数值常量
@@ -1370,6 +1445,47 @@ fn max<T>(array: &[T]) -> T {
 }
 ```
 
+```
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+fn main() {
+    let integer = Point { x: 5, y: 10 };
+    let float = Point { x: 1.0, y: 4.0 };
+}
+```
+
+### 方法定义中的泛型
+```
+struct Point<T> {
+    x: T,
+    y: T,
+}
+
+impl<T> Point<T> {
+    fn x(&self) -> &T {
+        &self.x
+    }
+}
+
+fn main() {
+    let p = Point { x: 5, y: 10 };
+
+    println!("p.x = {}", p.x());
+}
+```
+
+* Rust 通过在编译时进行泛型代码的 单态化（monomorphization）来保证效率。单态化是一个通过填充编译时使用的具体类型，将通用代码转换为特定代码的过程。
+  * 与C++一致
+  * 如果类型太多，必然导致二进制文件迅速增大
+
+### 模板特化
+```
+
+```
+
 # trait
 特性（trait）概念接近于 Java 中的接口（Interface），但两者不完全相同。特性与接口相同的地方在于它们都是一种行为规范，可以用于标识哪些类有哪些方法。
 
@@ -1389,6 +1505,15 @@ impl Descriptive for Person {
     }
 }
 ```
+
+### trait作为参数
+```
+pub fn notify(item: impl Summary) {
+    println!("Breaking news! {}", item.summarize());
+}
+```
+* 这个与虚函数有什么不同？
+
 
 # 生命期
 
@@ -1448,7 +1573,7 @@ fn main() {
 |      |   三元运算符   |   if表达式   |
 |  rust没有自增自减运算符    |   自增运算符 ++, --   |  i+=1, i-=1    |
 |   引用   |   指向对象的另一块内存，不拥有所有权   |  指针的别名，编译期层面完全没有开销    |
-| 成员可见性 | public / protected / private | pub |
+| 成员可见性 | public / protected / private / friend | pub   没有加pub都是private的 |
 | struct字节对齐 | __attribute(pack)__ | ? |
 |      | namespace |      |
 |      | frield 友元类 和 友元函数 |      |
@@ -1463,11 +1588,11 @@ fn main() {
 | 默认构造函数 | ClassName(){} | \#[derive(Default)] |
 | 复制构造函数 | ClassName(const ClassName& rsh){} | \#[derive(Clone)] |
 |      | union类型 |      |
-|      | 枚举类型 |      |
-|      |      | 装箱和拆箱 Box::new(Point { x: 0.0, y: 0.0 })<br/>   *varName拆箱 |
+|      | 枚举类型 | 支持数值枚举和字符串枚举，功能更加强大 |
+| 堆上内存分配，智能指针 |      | 装箱和拆箱 Box::new(Point { x: 0.0, y: 0.0 })<br/>   *varName拆箱 |
 |      | 智能指针 |      |
-| 强制类型转换 |                                          |      |
-| 隐式类型转换 |                                          |      |
+| 强制类型转换 | uint8_t a = (uint8_t)0xffffff; | let x:i32 = 5;  let y = x as i64; |
+| 隐式类型转换 |                                          | 存在 |
 | 数组 |      | let arr = [1,2,3,4]; |
 | 堆上内存分配 | new int; | let _box2 = Box::new(5i32); |
 | 多线程编程 |      |      |
@@ -1521,16 +1646,16 @@ fn main() {
 | typedef 类型别名 | | |
 | 枚举 | enum{A=0;} | 更强大，支持丰富的数据类型 |
 | 指针！！！ | 很灵活，很强大，很危险 | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
+| lambda表达式 | | |
+| 闭包 | | |
+| 函数尾递归调用 | | |
+| | const对象和const方法 | |
+| | -> 指针成员操作符 | |
+| | 静态成员函数/ 类的静态方法 | 关联函数 |
+| 继承 | | |
+| 虚继承 | | |
+| 多继承 | | |
+| | namespace | mod xxx {} |
 | | | |
 | | | |
 | | | |
@@ -1602,4 +1727,26 @@ fn diverges() -> ! {
 ```
 
 Rust会为每个crate都自动引入标准库模块，除非使用＃[no_std]属性明确指定了不需要标准库。
+
+# rustc与g++的对比
+
+| 对比项           | g++  | rustc |
+| :--------------- | :--- | :---- |
+| 引入头文件的路径 | -I   |       |
+| 引入库的路径     | -L   |       |
+| 优化选项         | -O   |       |
+|                  |      |       |
+|                  |      |       |
+|                  |      |       |
+|                  |      |       |
+|                  |      |       |
+|                  |      |       |
+
+
+
+* rust必然替换C++
+* rust适合写内存安全的系统程序
+* 如果不担心垃圾收集影响性能，如果不是开发系统级别的应用，何必用rust? golang足矣！
+
+
 
