@@ -1356,6 +1356,15 @@ Rust 可以在编译时就避免数据竞争。数据竞争（data race）类似
   * 至少有一个指针被用来写入数据。
   * 没有同步数据访问的机制。
 
+### 静态引用
+```
+let s: &'static str = "hello world";
+
+// 'static as part of a trait bound:
+fn generic<T>(x: T) where T: 'static {}
+
+```
+
 ## 10.7 slice
 另一个没有所有权的数据类型是 slice。slice 允许你引用集合中一段连续的元素序列，而不用引用整个集合。
 
@@ -1578,6 +1587,22 @@ fn returns_summarizable() -> impl Summary {
 }
 ```
 
+## 继承
+```
+trait OutlinePrint: fmt::Display {
+        // outline_print是一个默认实现功能函数.
+        // 利用self数据进行二次加工.
+        fn outline_print(&self) {
+            let output = self.to_string();
+            let len = output.len();
+            println!("{}", "*".repeat(len + 4));
+            println!("*{}*", " ".repeat(len + 2));
+            println!("* {} *", output);
+            println!("*{}*", " ".repeat(len + 2));
+            println!("{}", "*".repeat(len + 4));
+        }
+    }
+```
 
 
 # 生命期
@@ -1591,6 +1616,13 @@ fn returns_summarizable() -> impl Summary {
 ```
 
 * 为什么编译期不能自动检查出生命周期，而需要开发自己去定义？
+
+'static 生命周期是可能的生命周期中最长的，它会在整个程序运行的时期中 存在。'static 生命周期也可被强制转换成一个更短的生命周期。有两种方式使变量 拥有 'static 生命周期，它们都把数据保存在可执行文件的只读内存区：
+
+使用 static 声明来产生常量（constant）。
+产生一个拥有 &'static str 类型的 string 字面量。
+
+
 
 # 库
 
@@ -1710,7 +1742,7 @@ fn main() {
 | 动态数组 | std::vector<int> | let v = vec![1, 2, 3, 4, 5]; |
 | 函数重载 | | |
 | 函数指针 | | |
-| typedef 类型别名 | | |
+| typedef 类型别名 | | type NewName = OldName;|
 | 枚举 | enum{A=0;} | 更强大，支持丰富的数据类型 |
 | 指针！！！ | 很灵活，很强大，很危险 | |
 | lambda表达式 | | |
@@ -1723,7 +1755,7 @@ fn main() {
 | 虚继承 | | |
 | 多继承 | | |
 | | namespace | mod xxx {} |
-| | | |
+| | switch | match |
 | | | |
 | | | |
 | | | |
@@ -1819,4 +1851,6 @@ Rust会为每个crate都自动引入标准库模块，除非使用＃[no_std]属
    * 大量的C++的代码遗产，如何继承
    * 交叉编译，支持更多平台
    * 汇编、SIMD、CPU cache line对齐，原子操作指令等，与CPU架构高度match，提升性能
+
+
 
