@@ -254,6 +254,10 @@ let origin = Point(0, 0, 0);
 
 我们也可以定义一个没有任何字段的结构体！它们被称为 类单元结构体（unit-like structs）因为它们类似于 ()，即 unit 类型。类单元结构体常常在你想要在某个类型上实现 trait 但不需要在类型中存储数据的时候发挥作用。
 
+```
+let unit = ();
+```
+
 ## 2.6 枚举
 * 枚举允许你通过列举可能的 成员（variants） 来定义一个类型。
 * 一个特别有用的枚举，叫做 Option，它代表一个值要么是某个值要么什么都不是。
@@ -269,6 +273,205 @@ enum IpAddrKind {
 //枚举赋值
 let four = IpAddrKind::V4;
 let six = IpAddrKind::V6;
+```
+
+### 多种数据类型的枚举
+```
+// 创建一个 `enum`（枚举）来对 web 事件分类。注意变量名和类型共同指定了 `enum`
+// 取值的种类：`PageLoad` 不等于 `PageUnload`，`KeyPress(char)` 不等于
+// `Paste(String)`。各个取值不同，互相独立。
+enum WebEvent {
+    // 一个 `enum` 可以是单元结构体（称为 `unit-like` 或 `unit`），
+    PageLoad,
+    PageUnload,
+    // 或者一个元组结构体，
+    KeyPress(char),
+    Paste(String),
+    // 或者一个普通的结构体。
+    Click { x: i64, y: i64 }
+}
+
+// 此函数将一个 `WebEvent` enum 作为参数，无返回值。
+fn inspect(event: WebEvent) {
+    match event {
+        WebEvent::PageLoad => println!("page loaded"),
+        WebEvent::PageUnload => println!("page unloaded"),
+        // 从 `enum` 里解构出 `c`。
+        WebEvent::KeyPress(c) => println!("pressed '{}'.", c),
+        WebEvent::Paste(s) => println!("pasted \"{}\".", s),
+        // 把 `Click` 解构给 `x` and `y`。
+        WebEvent::Click { x, y } => {
+            println!("clicked at x={}, y={}.", x, y);
+        },
+    }
+}
+
+fn main() {
+    let pressed = WebEvent::KeyPress('x');
+    // `to_owned()` 从一个字符串切片中创建一个具有所有权的 `String`。
+    let pasted  = WebEvent::Paste("my text".to_owned());
+    let click   = WebEvent::Click { x: 20, y: 80 };
+    let load    = WebEvent::PageLoad;
+    let unload  = WebEvent::PageUnload;
+
+    inspect(pressed);
+    inspect(pasted);
+    inspect(click);
+    inspect(load);
+    inspect(unload);
+}
+```
+
+### 枚举实现方法 ??? (居然可以这样)
+```
+enum VeryVerboseEnumOfThingsToDoWithNumbers {
+    Add,
+    Subtract,
+}
+
+impl VeryVerboseEnumOfThingsToDoWithNumbers {
+    fn run(&self, x: i32, y: i32) -> i32 {
+        match self {
+            Self::Add => x + y,
+            Self::Subtract => x - y,
+        }
+    }
+}
+
+```
+
+### 使用use来简化枚举值的导入
+```
+enum Status {
+    Rich,
+    Poor,
+}
+
+enum Work {
+    Civilian,
+    Soldier,
+}
+
+fn main() {
+    // 显式地 `use` 各个名称使他们直接可用，而不需要指定它们来自 `Status`。
+    use Status::{Poor, Rich};
+    // 自动地 `use` `Work` 内部的各个名称。
+    use Work::*;
+
+    // `Poor` 等价于 `Status::Poor`。
+    let status = Poor;
+    // `Civilian` 等价于 `Work::Civilian`。
+    let work = Civilian;
+
+    match status {
+        // 注意这里没有用完整路径，因为上面显式地使用了 `use`。
+        Rich => println!("The rich have lots of money!"),
+        Poor => println!("The poor have no money..."),
+    }
+
+    match work {
+        // 再次注意到没有用完整路径。
+        Civilian => println!("Civilians work!"),
+        Soldier  => println!("Soldiers fight!"),
+    }
+}
+```
+
+### 枚举值转换为整形（C风格）
+```
+// 拥有隐式辨别值（implicit discriminator，从 0 开始）的 enum
+enum Number {
+    Zero,
+    One,
+    Two,
+}
+
+// 拥有显式辨别值（explicit discriminator）的 enum
+enum Color {
+    Red = 0xff0000,
+    Green = 0x00ff00,
+    Blue = 0x0000ff,
+}
+
+fn main() {
+    // `enum` 可以转成整形。
+    println!("zero is {}", Number::Zero as i32);
+    println!("one is {}", Number::One as i32);
+
+    println!("roses are #{:06x}", Color::Red as i32);
+    println!("violets are #{:06x}", Color::Blue as i32);
+}
+```
+
+### 用enum实现一个链表
+see: https://rustwiki.org/zh-CN/rust-by-example/custom_types/enum/testcase_linked_list.html
+```
+use List::*;
+
+enum List {
+    // Cons：元组结构体，包含链表的一个元素和一个指向下一节点的指针
+    Cons(u32, Box<List>),
+    // Nil：末结点，表明链表结束
+    Nil,
+}
+
+// 可以为 enum 定义方法
+impl List {
+    // 创建一个空的 List 实例
+    fn new() -> List {
+        // `Nil` 为 `List` 类型（译注：因 `Nil` 的完整名称是 `List::Nil`）
+        Nil
+    }
+
+    // 处理一个 List，在其头部插入新元素，并返回该 List
+    fn prepend(self, elem: u32) -> List {
+        // `Cons` 同样为 List 类型
+        Cons(elem, Box::new(self))
+    }
+
+    // 返回 List 的长度
+    fn len(&self) -> u32 {
+        // 必须对 `self` 进行匹配（match），因为这个方法的行为取决于 `self` 的
+        // 取值种类。
+        // `self` 为 `&List` 类型，`*self` 为 `List` 类型，匹配一个具体的 `T`
+        // 类型要好过匹配引用 `&T`。
+        match *self {
+            // 不能得到 tail 的所有权，因为 `self` 是借用的；
+            // 因此使用一个对 tail 的引用
+            Cons(_, ref tail) => 1 + tail.len(),
+            // （递归的）基准情形（base case）：一个长度为 0 的空列表
+            Nil => 0
+        }
+    }
+
+    // 返回列表的字符串表示（该字符串是堆分配的）
+    fn stringify(&self) -> String {
+        match *self {
+            Cons(head, ref tail) => {
+                // `format!` 和 `print!` 类似，但返回的是一个堆分配的字符串，
+                // 而不是打印结果到控制台上
+                format!("{}, {}", head, tail.stringify())
+            },
+            Nil => {
+                format!("Nil")
+            },
+        }
+    }
+}
+
+fn main() {
+    // 创建一个空链表
+    let mut list = List::new();
+
+    // 追加一些元素
+    list = list.prepend(1);
+    list = list.prepend(2);
+    list = list.prepend(3);
+
+    // 显示链表的最后状态
+    println!("linked list has length: {}", list.len());
+    println!("{}", list.stringify());
+}
 ```
 
 ## 2.7 string类型
@@ -655,6 +858,151 @@ fn bar() {
 fn main() { bar() }
 ```
 
+## 类型别名
+```
+type NewType = OldType;
+
+```
+
+## 类型强制转换
+Rust 不提供原生类型之间的隐式类型转换（coercion），但可以使用 as 关键字进行显 式类型转换（casting）。
+```
+// 不显示类型转换产生的溢出警告。
+#![allow(overflowing_literals)]
+
+fn main() {
+    let decimal = 65.4321_f32;
+
+    // 错误！不提供隐式转换
+    let integer: u8 = decimal;
+    // 改正 ^ 注释掉这一行
+
+    // 可以显式转换
+    let integer = decimal as u8;
+    let character = integer as char;
+
+    println!("Casting: {} -> {} -> {}", decimal, integer, character);
+
+    // 当把任何类型转换为无符号类型 T 时，会不断加上或减去 (std::T::MAX + 1)
+    // 直到值位于新类型 T 的范围内。
+
+    // 1000 已经在 u16 的范围内
+    println!("1000 as a u16 is: {}", 1000 as u16);
+
+    // 1000 - 256 - 256 - 256 = 232
+    // 事实上的处理方式是：从最低有效位（LSB，least significant bits）开始保留
+    // 8 位，然后剩余位置，直到最高有效位（MSB，most significant bit）都被抛弃。
+    // 译注：MSB 就是二进制的最高位，LSB 就是二进制的最低位，按日常书写习惯就是
+    // 最左边一位和最右边一位。
+    println!("1000 as a u8 is : {}", 1000 as u8);
+    // -1 + 256 = 255
+    println!("  -1 as a u8 is : {}", (-1i8) as u8);
+
+    // 对正数，这就和取模一样。
+    println!("1000 mod 256 is : {}", 1000 % 256);
+
+    // 当转换到有符号类型时，（位操作的）结果就和 “先转换到对应的无符号类型，
+    // 如果 MSB 是 1，则该值为负” 是一样的。
+
+    // 当然如果数值已经在目标类型的范围内，就直接把它放进去。
+    println!(" 128 as a i16 is: {}", 128 as i16);
+    // 128 转成 u8 还是 128，但转到 i8 相当于给 128 取八位的二进制补码，其值是：
+    println!(" 128 as a i8 is : {}", 128 as i8);
+
+    // 重复之前的例子
+    // 1000 as u8 -> 232
+    println!("1000 as a u8 is : {}", 1000 as u8);
+    // 232 的二进制补码是 -24
+    println!(" 232 as a i8 is : {}", 232 as i8);
+}
+
+```
+
+### 使用trait From来转换类型
+```
+use std::convert::From;
+
+#[derive(Debug)]
+struct Number {
+    value: i32,
+}
+
+impl From<i32> for Number {
+    fn from(item: i32) -> Self {
+        Number { value: item }
+    }
+}
+
+fn main() {
+    let num = Number::from(30);
+    println!("My number is {:?}", num);
+}
+
+```
+
+### A类型实现了对B类型的From，则B类型自动有了得到A类型的Into
+```
+use std::convert::From;
+
+#[derive(Debug)]
+struct Number {
+    value: i32,
+}
+
+impl From<i32> for Number {
+    fn from(item: i32) -> Self {
+        Number { value: item }
+    }
+}
+
+fn main() {
+    let int = 5;
+    // 试试删除类型说明
+    let num: Number = int.into();
+    println!("My number is {:?}", num);
+}
+```
+
+### TryFrom和TryInto
+TryFrom 和 TryInto trait 用于易出错的转换，也正因如此，其返回值是 Result 型。
+```
+use std::convert::TryFrom;
+use std::convert::TryInto;
+
+#[derive(Debug, PartialEq)]
+struct EvenNumber(i32);
+
+impl TryFrom<i32> for EvenNumber {
+    type Error = ();
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        if value % 2 == 0 {
+            Ok(EvenNumber(value))
+        } else {
+            Err(())
+        }
+    }
+}
+
+fn main() {
+    // TryFrom
+
+    assert_eq!(EvenNumber::try_from(8), Ok(EvenNumber(8)));
+    assert_eq!(EvenNumber::try_from(5), Err(()));
+
+    // TryInto
+
+    let result: Result<EvenNumber, ()> = 8i32.try_into();
+    assert_eq!(result, Ok(EvenNumber(8)));
+    let result: Result<EvenNumber, ()> = 5i32.try_into();
+    assert_eq!(result, Err(()));
+}
+
+```
+
+### ToString 和 FromStr
+see: https://rustwiki.org/zh-CN/rust-by-example/conversion/string.html
+
 # 3.常量
 ## 3.1 数值常量
 1_000
@@ -757,20 +1105,62 @@ static NUM: i32 = 100;
 定义全局变量使用关键字***static***,而定义常量使用***const***,定义普通变量使用***let***
 和常量不同，全局变量可以定义为***可变的(mut)***,定义方式如下:
 
+```
 static mut NUM:i32 = 100
-复制代码因为全局变量可变，就会出被多个线程同时访问的情况，因而引发内存不安全的问题，所以对于全局可变(static mut)变量的访问和修改代码就必须在unsafe块中进行定义，比如这样:
+```
+因为全局变量可变，就会出被多个线程同时访问的情况，因而引发内存不安全的问题，所以对于全局可变(static mut)变量的访问和修改代码就必须在unsafe块中进行定义，比如这样:
+```
 unsafe {
     NUM += 1;
     println!("NUM: {}", NUM);
 }
-复制代码
+```
 存储在全局(static)变量中的值必须是Sync，也就是需要实现Sync trait.
 和常量相同，在定义全局变量的时候必须进行赋值，且赋值必须是在编译期就可以计算出的值(常量表达式/数学表达式)，不能是运行时才能计算出的值(如函数)
 
 
-
+### 'static声明期
+* 可以理解为从程序启动到结束都一直有效'
 生命周期注释有一个特别的：'static 。所有用双引号包括的字符串常量所代表的精确数据类型都是 &'static str ，'static 所表示的生命周期从程序运行开始到程序运行结束。
 
+static LANGUAGE: &'static str = "Rust";
+
+## 作用域与掩蔽
+```
+fn main() {
+    // 此绑定生存于 main 函数中
+    let long_lived_binding = 1;
+
+    // 这是一个代码块，比 main 函数拥有更小的作用域
+    {
+        // 此绑定只存在于本代码块
+        let short_lived_binding = 2;
+
+        println!("inner short: {}", short_lived_binding);
+
+        // 此绑定*掩蔽*了外面的绑定
+        let long_lived_binding = 5_f32;
+
+        println!("inner long: {}", long_lived_binding);
+    }
+    // 代码块结束
+
+    // 报错！`short_lived_binding` 在此作用域上不存在
+    println!("outer short: {}", short_lived_binding);
+    // 改正 ^ 注释掉这行
+
+    println!("outer long: {}", long_lived_binding);
+
+    // 此绑定同样*掩蔽*了前面的绑定
+    let long_lived_binding = 'a';
+
+    println!("outer long: {}", long_lived_binding);
+}
+```
+## 变量的初始化
+?
+* rust中的变量会自动初始化吗？
+* 比如栈上的大数组，总是自动初始化，会影响性能的
 
 # 5.操作符和表达式
 ## 5.1 算术运算符
@@ -834,7 +1224,13 @@ unsafe {
 
 # 6.流程控制
 
+* rust中都是表达式
+
+
 ## 6.1 if
+* Rust 语言中的布尔判断条件 不必用小括号包住，且每个条件后面都跟着一个代码块。
+* if-else 条件选择是一个表达 式，并且所有分支都必须返回相同的类型。
+
 ```
     if number < 5 {
         println!("condition was true");
@@ -856,6 +1252,37 @@ let number = if condition {
 ```
 
 * if / else if / else
+
+```
+fn main() {
+    let n = 5;
+
+    if n < 0 {
+        print!("{} is negative", n);
+    } else if n > 0 {
+        print!("{} is positive", n);
+    } else {
+        print!("{} is zero", n);
+    }
+
+    let big_n =
+        if n < 10 && n > -10 {
+            println!(", and is a small number, increase ten-fold");
+
+            // 这个表达式返回一个 `i32` 类型。
+            10 * n
+        } else {
+            println!(", and is a big number, half the number");
+
+            // 这个表达式也必须返回一个 `i32` 类型。
+            n / 2
+            // 试一试 ^ 试着加上一个分号来结束这条表达式。
+        };
+    //   ^ 不要忘记在这里加上一个分号！所有的 `let` 绑定都需要它。
+
+    println!("{} -> {}", n, big_n);
+}
+```
 
 ## 6.2 loop
 ```
@@ -884,6 +1311,33 @@ fn main() {
 }
 ```
 
+### 嵌套循环和标签
+在处理嵌套循环的时候可以 break 或 continue 外层循环。在这类情形中，循环必须 用一些 'label（标签）来注明，并且标签必须传递给 break/continue 语句。
+```
+#![allow(unreachable_code)]
+
+fn main() {
+    'outer: loop {
+        println!("Entered the outer loop");
+
+        'inner: loop {
+            println!("Entered the inner loop");
+
+            // 这只是中断内部的循环
+            //break;
+
+            // 这会中断外层循环
+            break 'outer;
+        }
+
+        println!("This point will never be reached");
+    }
+
+    println!("Exited the outer loop");
+}
+
+```
+
 ## 6.3 while
 
 ```
@@ -902,6 +1356,8 @@ fn main() {
 * 可以用break退出
 
 ## 6.4 for
+see: https://rustwiki.org/zh-CN/rust-by-example/flow_control/for.html
+
 
 ```
 fn main() {
@@ -968,6 +1424,55 @@ match some_u8_value {
 }
 ```
 
+### 匹配多个值
+```
+fn main() {
+    let number = 13;
+    // 试一试 ^ 将不同的值赋给 `number`
+
+    println!("Tell me about {}", number);
+    match number {
+        // 匹配单个值
+        1 => println!("One!"),
+        // 匹配多个值
+        2 | 3 | 5 | 7 | 11 => println!("This is a prime"),
+        // 匹配一个闭区间范围
+        13..=19 => println!("A teen"),
+        // 处理其他情况
+        _ => println!("Ain't special"),
+    }
+
+    let boolean = true;
+    // match 也是一个表达式
+    let binary = match boolean {
+        // match 分支必须覆盖所有可能的值
+        false => 0,
+        true => 1,
+        // 试一试 ^ 将其中一条分支注释掉
+    };
+
+    println!("{} -> {}", boolean, binary);
+}
+```
+
+### 元组匹配
+```
+fn main() {
+    let pair = (0, -2);
+    // 试一试 ^ 将不同的值赋给 `pair`
+
+    println!("Tell me about {:?}", pair);
+    // match 可以解构一个元组
+    match pair {
+        // 解构出第二个值
+        (0, y) => println!("First is `0` and `y` is `{:?}`", y),
+        (x, 0) => println!("`x` is `{:?}` and last is `0`", x),
+        _      => println!("It doesn't matter what they are"),
+        // `_` 表示不将值绑定到变量
+    }
+}
+
+```
 
 # 7.函数
 ```
@@ -1459,6 +1964,26 @@ fn main() {
 }
 ```
 
+## 常见的注解
+### #[allow(dead_code)]
+// 该属性用于隐藏对未使用代码的警告。
+```
+#[allow(dead_code)]
+struct Rectangle {
+    p1: Point,
+    p2: Point,
+}
+```
+
+### #![allow(overflowing_literals)]
+```
+// 不显示类型转换产生的溢出警告。
+#![allow(overflowing_literals)]
+```
+
+### #[PartialEq]
+
+
 # 泛型
 
 ```
@@ -1625,6 +2150,39 @@ trait OutlinePrint: fmt::Display {
     }
 ```
 
+## 常见的trait
+### fmt::Debug
+使用 {:?} 标记。格式化文本以供调试使用。
+Rust 也通过 {:#?} 提供了 “美化打印” 的功能
+
+```
+#[derive(Debug)]
+struct Structure(i32);
+
+// 将 `Structure` 放到结构体 `Deep` 中。然后使 `Deep` 也能够打印。
+#[derive(Debug)]
+struct Deep(Structure);
+```
+
+### fmt::Display
+使用 {} 标记。以更优雅和友好的风格来格式化文本。
+```
+use std::fmt; // 导入 `fmt`
+
+// 带有两个数字的结构体。推导出 `Debug`，以便与 `Display` 的输出进行比较。
+#[derive(Debug)]
+struct MinMax(i64, i64);
+
+// 实现 `MinMax` 的 `Display`。
+impl fmt::Display for MinMax {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // 使用 `self.number` 来表示各个数据。
+        write!(f, "({}, {})", self.0, self.1)
+    }
+}
+
+```
+
 
 # 生命期
 
@@ -1659,6 +2217,25 @@ fn main() {
     vector.push(32);
     vector.push(64);
     println!("{:?}", vector);
+}
+```
+
+### 类型推断
+```
+fn main() {
+    // 因为有类型说明，编译器知道 `elem` 的类型是 u8。
+    let elem = 5u8;
+
+    // 创建一个空向量（vector，即不定长的，可以增长的数组）。
+    let mut vec = Vec::new();
+    // 现在编译器还不知道 `vec` 的具体类型，只知道它是某种东西构成的向量（`Vec<_>`）
+    
+    // 在向量中插入 `elem`。
+    vec.push(elem);
+    // 啊哈！现在编译器知道 `vec` 是 u8 的向量了（`Vec<u8>`）。
+    // 试一试 ^ 注释掉 `vec.push(elem)` 这一行。
+
+    println!("{:?}", vec);
 }
 ```
 
@@ -1732,9 +2309,9 @@ fn main() {
 | 变量隐藏 |     | let a:int32=1; let a = "str"; |
 | 字符串转换为数字 | atoi("12345") | "12345".parse().expect("not a number") |
 | 整形溢出 | 不检查 | let a:u8=255;   a += 1;  debug模式下会导致panic， release模式不检查 |
-|      | sizeof(xxx) |       |
+|      | sizeof(xxx) | use std::mem;  mem::size_of_val(&xs) |
 | 多返回值 | 使用out参数 | 使用tuple |
-| 全局变量 |     |       |
+| 全局变量 |     | static来声明，变量名全部大写，使用unsafe来更新 |
 | static变量 |     |       |
 | main函数 | int main(){} | fn main(){} |
 | 函数声明 | int func(); | 不用声明 |
@@ -1784,6 +2361,24 @@ fn main() {
 | | errno | enum Result<T, E> |
 | | | 返回类型 ! |
 | | void | 返回类型  () |
+| | sprintf() | format!() |
+| | printf() | print!    println!() |
+| | fprintf(stderr, "") | eprint!()   eprintln!() |
+| 多返回值 | 指针或者引用类型的out参数 | 用tuple类型实现多返回值 |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
+| | | |
 | | | |
 | | | |
 
@@ -1874,4 +2469,41 @@ Rust会为每个crate都自动引入标准库模块，除非使用＃[no_std]属
    * 汇编、SIMD、CPU cache line对齐，原子操作指令等，与CPU架构高度match，提升性能
 
 
+# rust的坑
+## 1.多写了分号
+```
+let z = {
+        // 分号结束了这个表达式，于是将 `()` 赋给 `z`
+        2 * x;
+    };
+```
 
+
+## 完全看不懂
+```
+ // Rust 对这种情况提供了 `ref`。它更改了赋值行为，从而可以对具体值创建引用。
+    // 下面这行将得到一个引用。
+    let ref _is_a_reference = 3;
+
+    // 相应地，定义两个非引用的变量，通过 `ref` 和 `ref mut` 仍可取得其引用。
+    let value = 5;
+    let mut mut_value = 6;
+
+    // 使用 `ref` 关键字来创建引用。
+    // 译注：下面的 r 是 `&i32` 类型，它像 `i32` 一样可以直接打印，因此用法上
+    // 似乎看不出什么区别。但读者可以把 `println!` 中的 `r` 改成 `*r`，仍然能
+    // 正常运行。前面例子中的 `println!` 里就不能是 `*val`，因为不能对整数解
+    // 引用。
+    match value {
+        ref r => println!("Got a reference to a value: {:?}", r),
+    }
+
+    // 类似地使用 `ref mut`。
+    match mut_value {
+        ref mut m => {
+            // 已经获得了 `mut_value` 的引用，先要解引用，才能改变它的值。
+            *m += 10;
+            println!("We added 10. `mut_value`: {:?}", m);
+        },
+    }
+```
