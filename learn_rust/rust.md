@@ -212,6 +212,31 @@ fn main() {
 * 可以用元祖来实现类似多返回值的效果
 *  元组的第一个索引值是 0 
 
+* tuple的取值：
+```
+fn main() {
+    struct Foo { x: (u32, u32), y: u32 }
+
+    // 解构结构体的成员
+    let foo = Foo { x: (1, 2), y: 3 };
+    let Foo { x: (a, b), y } = foo;
+
+    println!("a = {}, b = {},  y = {} ", a, b, y);
+
+    // 可以解构结构体并重命名变量，成员顺序并不重要
+
+    let Foo { y: i, x: j } = foo;
+    println!("i = {:?}, j = {:?}", i, j);
+
+    // 也可以忽略某些变量
+    let Foo { y, .. } = foo;
+    println!("y = {}", y);
+
+    // 这将得到一个错误：模式中没有提及 `x` 字段
+    // let Foo { y } = foo;
+}
+```
+
 ### 2.5.2 数组类型
 let a = [1, 2, 3, 4, 5];
 
@@ -858,6 +883,43 @@ fn bar() {
 fn main() { bar() }
 ```
 
+### 结构体变量的赋值
+see: https://rustwiki.org/zh-CN/rust-by-example/fn/methods.html
+```
+let Point { x: x1, y: y1 } = self.p1;
+let Point { x: x2, y: y2 } = self.p2;
+```
+
+### 析构的例子
+see: https://rustwiki.org/zh-CN/rust-by-example/fn/methods.html
+```
+// `Pair` 拥有资源：两个堆分配的整型
+struct Pair(Box<i32>, Box<i32>);
+
+impl Pair {
+    // 这个方法会 “消耗” 调用者的资源
+    // `self` 为 `self: Self` 的语法糖
+    fn destroy(self) {
+        // 解构 `self`
+        let Pair(first, second) = self;
+
+        println!("Destroying Pair({}, {})", first, second);
+
+        // `first` 和 `second` 离开作用域后释放
+    }
+}
+
+fn main(){
+    let pair = Pair(Box::new(1), Box::new(2));
+
+    pair.destroy();
+
+    // 报错！前面的 `destroy` 调用 “消耗了” `pair`
+    //pair.destroy();
+    // 试一试 ^ 将此行注释去掉
+}
+```
+
 ## 类型别名
 ```
 type NewType = OldType;
@@ -1284,6 +1346,38 @@ fn main() {
 }
 ```
 
+### let if表达式
+```
+// 以这个 enum 类型为例
+enum Foo {
+    Bar,
+    Baz,
+    Qux(u32)
+}
+
+fn main() {
+    // 创建变量
+    let a = Foo::Bar;
+    let b = Foo::Baz;
+    let c = Foo::Qux(100);
+    
+    // 变量 a 匹配到了 Foo::Bar
+    if let Foo::Bar = a {
+        println!("a is foobar");
+    }
+    
+    // 变量 b 没有匹配到 Foo::Bar，因此什么也不会打印。
+    if let Foo::Bar = b {
+        println!("b is foobar");
+    }
+    
+    // 变量 c 匹配到了 Foo::Qux，它带有一个值，就和上面例子中的 Some() 类似。
+    if let Foo::Qux(value) = c {
+        println!("c is {}", value);
+    }
+}
+```
+
 ## 6.2 loop
 ```
 fn main() {
@@ -1354,6 +1448,29 @@ fn main() {
 }
 ```
 * 可以用break退出
+
+### while let
+```
+fn main() {
+    // 将 `optional` 设为 `Option<i32>` 类型
+    let mut optional = Some(0);
+
+    // 这读作：当 `let` 将 `optional` 解构成 `Some(i)` 时，就
+    // 执行语句块（`{}`）。否则就 `break`。
+    while let Some(i) = optional {
+        if i > 9 {
+            println!("Greater than 9, quit!");
+            optional = None;
+        } else {
+            println!("`i` is `{:?}`. Try again.", i);
+            optional = Some(i + 1);
+        }
+        // ^ 使用的缩进更少，并且不用显式地处理失败情况。
+    }
+    // ^ `if let` 有可选的 `else`/`else if` 分句，
+    // 而 `while let` 没有。
+}
+```
 
 ## 6.4 for
 see: https://rustwiki.org/zh-CN/rust-by-example/flow_control/for.html
@@ -1474,6 +1591,64 @@ fn main() {
 
 ```
 
+### 守卫 (match里面再加if)
+```
+fn main() {
+    let pair = (2, -2);
+    // 试一试 ^ 将不同的值赋给 `pair`
+
+    println!("Tell me about {:?}", pair);
+    match pair {
+        (x, y) if x == y => println!("These are twins"),
+        // ^ `if` 条件部分是一个守卫
+        (x, y) if x + y == 0 => println!("Antimatter, kaboom!"),
+        (x, _) if x % 2 == 1 => println!("The first one is odd"),
+        _ => println!("No correlation..."),
+    }
+}
+```
+
+### 绑定变量名
+```
+// `age` 函数，返回一个 `u32` 值。
+fn age() -> u32 {
+    15
+}
+
+fn main() {
+    println!("Tell me type of person you are");
+
+    match age() {
+        0             => println!("I'm not born yet I guess"),
+        // 可以直接 `match` 1 ... 12，但怎么把岁数打印出来呢？
+        // 相反，在 1 ... 12 分支中绑定匹配值到 `n` 。现在年龄就可以读取了。
+        n @ 1  ... 12 => println!("I'm a child of age {:?}", n),
+        n @ 13 ... 19 => println!("I'm a teen of age {:?}", n),
+        // 不符合上面的范围。返回结果。
+        n             => println!("I'm an old person of age {:?}", n),
+    }
+}
+```
+
+### 绑定变量名+枚举
+```
+fn some_number() -> Option<u32> {
+    Some(42)
+}
+
+fn main() {
+    match some_number() {
+        // Got `Some` variant, match if its value, bound to `n`,
+        // is equal to 42.
+        Some(n @ 42) => println!("The Answer: {}!", n),
+        // Match any other number.
+        Some(n)      => println!("Not interesting... {}", n),
+        // Match anything else (`None` variant).
+        _            => (),
+    }
+}
+```
+
 # 7.函数
 ```
 fn another_function(x: i32) {
@@ -1580,7 +1755,109 @@ fn main() {
 ```
 
 ## 闭包
+https://rustwiki.org/zh-CN/rust-by-example/fn/closures.html
+Rust 中的闭包（closure），也叫做 lambda 表达式或者 lambda，是一类能够捕获周围 作用域中变量的函数。例如，一个可以捕获 x 变量的闭包如下：
 
+
+|val| val + x
+它们的语法和能力使它们在临时（on the fly）使用时相当方便。调用一个闭包和调用一个 函数完全相同，不过调用闭包时，输入和返回类型两者都可以自动推导，而输入变量 名必须指明。
+
+其他的特点包括：
+
+声明时使用 || 替代 () 将输入参数括起来。
+函数体定界符（{}）对于单个表达式是可选的，其他情况必须加上。
+有能力捕获外部环境的变量。
+
+```
+fn main() {
+    // 通过闭包和函数分别实现自增。
+    // 译注：下面这行是使用函数的实现
+    fn  function            (i: i32) -> i32 { i + 1 }
+
+    // 闭包是匿名的，这里我们将它们绑定到引用。
+    // 类型标注和函数的一样，不过类型标注和使用 `{}` 来围住函数体都是可选的。
+    // 这些匿名函数（nameless function）被赋值给合适地命名的变量。
+    let closure_annotated = |i: i32| -> i32 { i + 1 };
+    let closure_inferred  = |i     |          i + 1  ;
+    
+    // 译注：将闭包绑定到引用的说法可能不准。
+    // 据[语言参考](https://doc.rust-lang.org/beta/reference/types.html#closure-types)
+    // 闭包表达式产生的类型就是 “闭包类型”，不属于引用类型，而且确实无法对上面两个
+    // `closure_xxx` 变量解引用。
+    
+    let i = 1;
+    // 调用函数和闭包。
+    println!("function: {}", function(i));
+    println!("closure_annotated: {}", closure_annotated(i));
+    println!("closure_inferred: {}", closure_inferred(i));
+
+    // 没有参数的闭包，返回一个 `i32` 类型。
+    // 返回类型是自动推导的。
+    let one = || 1;
+    println!("closure returning one: {}", one());
+}
+```
+
+
+## 方法
+see: https://rustwiki.org/zh-CN/rust-by-example/fn/methods.html
+```
+struct Point {
+    x: f64,
+    y: f64,
+}
+
+// 实现的代码块，`Point` 的所有方法都在这里给出
+impl Point {
+    // 这是一个静态方法（static method）
+    // 静态方法不需要被实例调用
+    // 这类方法一般用作构造器（constructor）
+    fn origin() -> Point {
+        Point { x: 0.0, y: 0.0 }
+    }
+
+    // 另外一个静态方法，需要两个参数：
+    fn new(x: f64, y: f64) -> Point {
+        Point { x: x, y: y }
+    }
+}
+
+struct Rectangle {
+    p1: Point,
+    p2: Point,
+}
+
+impl Rectangle {
+    // 这是一个实例方法（instance method）
+    // `&self` 是 `self: &Self` 的语法糖（sugar），其中 `Self` 是方法调用者的
+    // 类型。在这个例子中 `Self` = `Rectangle`
+    fn area(&self) -> f64 {
+        // `self` 通过点运算符来访问结构体字段
+        let Point { x: x1, y: y1 } = self.p1;
+        let Point { x: x2, y: y2 } = self.p2;
+
+        // `abs` 是一个 `f64` 类型的方法，返回调用者的绝对值
+        ((x1 - x2) * (y1 - y2)).abs()
+    }
+
+    fn perimeter(&self) -> f64 {
+        let Point { x: x1, y: y1 } = self.p1;
+        let Point { x: x2, y: y2 } = self.p2;
+
+        2.0 * ((x1 - x2).abs() + (y1 - y2).abs())
+    }
+
+    // 这个方法要求调用者是可变的
+    // `&mut self` 为 `self: &mut Self` 的语法糖
+    fn translate(&mut self, x: f64, y: f64) {
+        self.p1.x += x;
+        self.p2.x += x;
+
+        self.p1.y += y;
+        self.p2.y += y;
+    }
+}
+```
 
 
 # 8.宏
@@ -1983,6 +2260,9 @@ struct Rectangle {
 
 ### #[PartialEq]
 
+### #![forbid(unsafe_code)]
+* 只允许安全代码
+
 
 # 泛型
 
@@ -2365,8 +2645,8 @@ fn main() {
 | | printf() | print!    println!() |
 | | fprintf(stderr, "") | eprint!()   eprintln!() |
 | 多返回值 | 指针或者引用类型的out参数 | 用tuple类型实现多返回值 |
-| | | |
-| | | |
+| bitfield | struct AA{int a:1;} | |
+| | delete | use std::mem; let movable = Box::new(3); mem::drop(movable); |
 | | | |
 | | | |
 | | | |
