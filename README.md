@@ -11,7 +11,7 @@ ahfuzhang, 阿福<br/>
 
 * 公众号：一本正经的瞎扯
 
-    ![gongzhonghao](D:\source\github.com\ahfuzhang\life_of_mine\images\gongzhonghao.png)
+    ![gongzhonghao](images/gongzhonghao.png)
 
 * zhihu：https://www.zhihu.com/people/ahfuzhang/posts
 
