@@ -193,6 +193,45 @@ s := fmt.Sprintf("%d", 123)
 
 对于性能敏感的场合，一定一定要做栈逃逸分析。
 
+### Hot path 0 allocations 技巧
+Hotpath上如果做到没有任何内存分配，对性能的提升是非常明显的。
+可是处理业务逻辑时往往不得不在堆上创建对象，然后传递到别的函数中。
+但是在 RPC 等场景中，很多堆上的对象往往只在一次 request-response 期间存在。那么就可以把所有位置的这种变量放在一个结构中，然后复用这个结构。
+VictoriaMetrics中大量使用了这种技巧。
+
+```go
+// MyContext 自定义一个上下文对象，然后这个自定义的context对象在业务处理的函数之间传递
+type MyContext struct{
+  buf []byte  
+}
+
+// Reset 对临时变量清零，以便复用。
+func (c *MyContext) Reset(){
+  c.buf = c.buf[:0]
+}
+
+// 定义一个内存池，用来缓存上下文对象
+var poolOfRequestContext = sync.Pool{
+  New: func() interface{}{
+    return &MyContext{}
+  }
+}
+
+// OnRequest 这是一个 rpc 框架中的业务 handler
+func OnRequest(req any)(rsp any, err error){
+  ctx := poolOfRequestContext.Get().(*MyContext)  // 从内存池获得上下文对象
+  defer poolOfRequestContext.Put(ctx)  // 请求结束后，要把对象放回内存池
+  ctx.Reset()
+  //
+  doSomething(ctx)
+  //...
+  return
+}
+
+func doSomething(ctx *MyContext){
+  ctx.buf = append(ctx.buf, "text"...)  // 直接使用 context 中的临时变量，这样在 hot path 就不用分配了
+}
+```
 
 
 # CPU使用层面的优化
@@ -701,6 +740,13 @@ golang 1.18正式发布了泛型。
 
 在整个团队的能力还没准备好迎接泛型以前，使用工具生产代码的`产生式编程`或许是更容易驾驭的方法。
 
+
+## 代码生成 go generate
+[go generate](https://go.dev/blog/generate) 命令可以在go build之前调用工具来生成代码。
+自定义的工具可以使用go ast来解析代码，并在其中插入一些信息来达到”编译期计算“的效果。
+
+具体可以看我实现的这个例子：[file_line](https://github.com/ahfuzhang/file_line)，在编译期获得代码的行号，避免运行期的开销。
+结合具体的应用场景，编译期计算有非常多可以挖掘的优化点。
 
 
 # API使用
