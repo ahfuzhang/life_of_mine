@@ -1060,7 +1060,46 @@ switch variable{
 * 连接池：似乎也没特别好说的，不过这篇分析文章让人耳目一新：《[Golang 黑魔法之 4 倍性能提升](https://jqs7.com/golang-black-magic-4x-app-faster/)》——每次都读完接收缓冲区的数据，使得连接池的复用率提升。
 
 
+
+## 指导编译器生成cpu cache友好的代码
+
+在 linux 系统编程中，有 `likely/unlikely`这样的宏，可以指导编译器对汇编代码的布局进行重排——likely部分的分支会紧跟着if语句，这样可以避免因为跳转过大而导致cpu 的代码cache miss；而unlikely的部分则不必考虑cache miss的影响，把更优的布局位置留给其他情况的分支。
+
+例如有如下代码：
+
+```go
+func xxx(){
+  if condition/*unlikely*/ {
+    //do something
+    // 假设这里的代码很多，且执行的概率又很低。
+    // 这里的代码布局可能导致 cache miss 增加
+    return
+  }
+  // some logic
+}
+```
+
+上面的代码修改写法，是可能会提升性能的：
+
+```go
+func xxx(){
+  if condition/*unlikely*/ {
+    goto OnMyCondition  // 相当于不要在 if 之后产生大的代码块。从而使if之后的cache hit 提高
+  }
+  // some logic
+  return
+  OnMyCondition:
+  //do something
+  return
+}
+```
+
+
+
+
+
 ##  过时的技巧：压舱物ballast
+
 (从 go 1.17 以后，以下技巧已经没有用处了)
 下面一段神奇的代码，能够减少GC的频率，从而提升程序性能：
 ```go
