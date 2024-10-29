@@ -2,7 +2,7 @@
 
 
 
-https://rustwiki.org/zh-CN/rust-by-example/    
+https://rustwiki.org/zh-CN/rust-by-example/
 通过例子学 Rust
 
 
@@ -141,6 +141,8 @@ Rust语言主要由以下几个核心部件组成：· 语言规范· 编译器�
 
 ## 对比：用C++开枪射击自己的脚
 * 未初始化指针
+  * 未初始化的变量
+  * 未初始化的内存
 * 指向任意地址的野指针
 * 释放后再使用的悬挂指针
 * 在堆上申请内存忘记释放
@@ -165,7 +167,8 @@ int main(){
 * 编译错误，尤其是模板的编译错误
 * 链接错误
 * 运行时的链接错误
-
+* 迭代器破坏
+* 并发环境下的内存问题
 
 ```
 · 引用空指针。· 使用未初始化内存。· 释放后使用，也就是使用悬垂指针。· 缓冲区溢出，比如数组越界。· 非法释放已经释放过的指针或未分配的指针，也就是重复释放。
@@ -179,6 +182,7 @@ int main(){
 * 构造和析构
 * 纯虚函数，接口
 * 面向对象
+  * private, protected, public, friend
 * 标准库，STL（容器、functor, 分配器、迭代器, 算法）
 * 多态
 ## GCC能做到的这些，RUST能做到吗？
@@ -191,6 +195,8 @@ int main(){
 * 原子操作指令
 * 访问数组的每个下标，都会导致下标范围检查。这样的指令必然导致性能问题。
 * 面向机器的更加底层的能力（union , bit field等特性）
+* template 的各种能力
+* 编译器的声明：让编辑器生成更好的代码
 
 ## 与C/C++已有库的整合，怎么样？
 
@@ -211,6 +217,8 @@ int main(){
 * 生命期声明：让引用更加安全
 * Option类型，避免空指针
 * 多编程范式
+* 无畏并发（还没理解怎么做到的）
+* 一种新的八股文 ———— 没那么灵活，开发难，编译难，但是运行的时候很放心
 
 
 
@@ -266,6 +274,8 @@ f64
 ## 2.3 布尔类型
 bool   有true/false两个值
 
+* bool 占几个字节?
+
 ## 2.4 字符类型
 char
 'a'
@@ -285,12 +295,12 @@ fn main() {
    let x: (i32, f64, u8) = (500, 6.4, 1);
    let five_hundred = x.0;
    let six_point_four = x.1;
-   
+
 }
 ```
 
 * 可以用元祖来实现类似多返回值的效果
-*  元组的第一个索引值是 0 
+*  元组的第一个索引值是 0
 
 * tuple的取值：
 ```
@@ -342,7 +352,7 @@ let mut m = [1, 2, 3];
 * 可以用a.len()来获取数组a的元素数量
 * 如果你尝试使用一个不在数组中的下标，你会得到一个错误：数组访问会在运行时进行边界检查。
    * 以上必然会带来性能损失，如何避免这里的性能损失呢？
-   *  当尝试用索引访问一个元素时，Rust 会检查指定的索引是否小于数组的长度。如果索引超出了数组长度，Rust 会 *panic* 
+   *  当尝试用索引访问一个元素时，Rust 会检查指定的索引是否小于数组的长度。如果索引超出了数组长度，Rust 会 *panic*
 
 
 
@@ -598,7 +608,7 @@ fn main() {
     let s = String::from("hello"); // 从此处起，s 是有效的
 
     // 使用 s
-}    
+}
 ```
 
 * String的内部包括：
@@ -678,8 +688,8 @@ let world = &s[6..11];
 * 如果第一个索引是0， 可以不写：
 ```
 
-let s = String::from("hello"); 
-let slice = &s[0..2]; 
+let s = String::from("hello");
+let slice = &s[0..2];
 let slice = &s[..2];
 ```
 
@@ -740,7 +750,7 @@ fn main() {
 * 布尔类型，bool，它的值是 true 和 false。
 * 所有浮点数类型，比如 f64。
 * 字符类型，char。
-* 元组，当且仅当其包含的类型也都是 Copy 的时候。比如，(i32, i32) 是 Copy 的，但 (i32, String) 就不是。   
+* 元组，当且仅当其包含的类型也都是 Copy 的时候。比如，(i32, i32) 是 Copy 的，但 (i32, String) 就不是。
 
 ## 类(面向对象)
 
@@ -1257,7 +1267,7 @@ Rust 中的表达式一般可以分为位置表达式（ PlaceExpression）和�
 变量隐藏甚至能修改类型：
 
 ```
-let spaces = " "; 
+let spaces = " ";
 let spaces = spaces.len();
 ```
 
@@ -1547,17 +1557,17 @@ fn main() {
     let a = Foo::Bar;
     let b = Foo::Baz;
     let c = Foo::Qux(100);
-    
+
     // 变量 a 匹配到了 Foo::Bar
     if let Foo::Bar = a {
         println!("a is foobar");
     }
-    
+
     // 变量 b 没有匹配到 Foo::Bar，因此什么也不会打印。
     if let Foo::Bar = b {
         println!("b is foobar");
     }
-    
+
     // 变量 c 匹配到了 Foo::Qux，它带有一个值，就和上面例子中的 Some() 类似。
     if let Foo::Qux(value) = c {
         println!("c is {}", value);
@@ -1867,13 +1877,13 @@ fn foo(x: i32){
 
 ```
 
-fn main() { 
-    let x = 5; 
-    let y = { 
-        let x = 3; 
-        x + 1 
-    }; 
-    println!("The value of y is: {}", y); 
+fn main() {
+    let x = 5;
+    let y = {
+        let x = 3;
+        x + 1
+    };
+    println!("The value of y is: {}", y);
 }
 ```
 
@@ -1966,12 +1976,12 @@ fn main() {
     // 这些匿名函数（nameless function）被赋值给合适地命名的变量。
     let closure_annotated = |i: i32| -> i32 { i + 1 };
     let closure_inferred  = |i     |          i + 1  ;
-    
+
     // 译注：将闭包绑定到引用的说法可能不准。
     // 据[语言参考](https://doc.rust-lang.org/beta/reference/types.html#closure-types)
     // 闭包表达式产生的类型就是 “闭包类型”，不属于引用类型，而且确实无法对上面两个
     // `closure_xxx` 变量解引用。
-    
+
     let i = 1;
     // 调用函数和闭包。
     println!("function: {}", function(i));
@@ -2116,7 +2126,7 @@ fn main() {
 assert_eq！ 断言
 println!("{:p}", var);  //打印指针地址
 
- panic!("error occured"); 
+ panic!("error occured");
 
 
 
@@ -2242,7 +2252,7 @@ fn main() {
     let s = "hello";   // 从此处起，s 是有效的
 
     // 使用 s
-} 
+}
 ```
 
 ## 10.2 所有权与函数
@@ -2308,7 +2318,7 @@ let s2 = s1;
 
 ```
 let s1 = String::from("hello");
-let s2 = s1; 
+let s2 = s1;
 println!("{}, world!", s1); // 错误！s1 已经失效
 ```
 ![原理图片](https://www.runoob.com/wp-content/uploads/2020/04/rust-ownership2.png)
@@ -2376,7 +2386,7 @@ fn gives_ownership() -> String {
     // some_string 被当作返回值移动出函数
 }
 
-fn takes_and_gives_back(a_string: String) -> String { 
+fn takes_and_gives_back(a_string: String) -> String {
     // a_string 被声明有效
 
     a_string  // a_string 被当作返回值移出函数
@@ -2866,7 +2876,7 @@ fn main() {
     // 创建一个空向量（vector，即不定长的，可以增长的数组）。
     let mut vec = Vec::new();
     // 现在编译器还不知道 `vec` 的具体类型，只知道它是某种东西构成的向量（`Vec<_>`）
-    
+
     // 在向量中插入 `elem`。
     vec.push(elem);
     // 啊哈！现在编译器知道 `vec` 是 u8 的向量了（`Vec<u8>`）。
@@ -2897,7 +2907,7 @@ fn main() {
 ```
 
 
- \#[derive(Debug)] 
+ \#[derive(Debug)]
 
 # rust与C++的对比
 
@@ -3066,8 +3076,8 @@ fn diverges() -> ! {
 * 静态代码检查
 * 内存泄漏？
 * 闭包
-*   如何修改rust的编译器选项，导致不要生成边界检查代码？   
-*   rust支持哪些交叉编译？   
+*   如何修改rust的编译器选项，导致不要生成边界检查代码？
+*   rust支持哪些交叉编译？
 
 
 # 核心库

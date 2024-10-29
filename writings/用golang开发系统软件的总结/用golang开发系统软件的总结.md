@@ -1,7 +1,7 @@
 用golang开发系统软件的总结
 
-
 **<font size=1 color=gray>作者:张富春(ahfuzhang)，转载时请注明作者和引用链接，谢谢！</font>**
+
 * <font size=1 color=gray>[cnblogs博客](https://www.cnblogs.com/ahfuzhang/)</font>
 * <font size=1 color=gray>[zhihu](https://www.zhihu.com/people/ahfuzhang/posts)</font>
 * <font size=1 color=gray>[Github](https://github.com/ahfuzhang)</font>
@@ -10,26 +10,15 @@
 
 ----
 
-
-
-
-
-
-
 众所周知，golang非常适合用于开发后台应用，但也通常是各种各样的应用层软件。
 
 开发系统软件， 目前的首选还是C++, C, rust等语言。相比应用软件，系统软件需要更加稳定，更加高效。其维持自身运行的资源消耗要尽可能小，然后才可以把更多CPU、内存等资源用于业务处理上。简单来说，系统软件在CPU、内存、磁盘、带宽等计算机资源的使用上要做到平衡且极致。
 
 **golang代码经过写法上的优化，是可以达到接近C的性能的。** 现在早已出现了很多用golang完成的系统软件，例如很优秀的etcd, VictoriaMetrics等。VictoriaMetrics是Metric处理领域优秀的TSDB存储系统， 在阅读其源码后，结合其他一些golang代码优化的知识，我将golang开发系统软件的知识总结如下：
 
-
-
 # golang的第一性能杀手：GC
 
 个人认为GC扫描对象、及其GC引起的STW，是golang最大的性能杀手。本小节讨论优化golang GC的各种技巧。
-
-
-
 
 ## 堆外内存
 
@@ -43,15 +32,11 @@
 如果使用mmap去映射一个文件，则某个虚拟地址没有对应的物理地址时，操作系统会产生缺页终端，并转到内核态执行，把磁盘的内容load到page cache。如果此时磁盘IO高，可能会长时间的阻塞……进一步地，导致了golang调度器的阻塞。
 ```
 
-
-
 ## 对象复用
 
 对象太多会导致GC压力，但又不可能不分配对象。因此对象复用就是减少分配消耗和减少GC的释放消耗的好办法。
 
 下面分别通过不同的场景来讨论如何复用对象。
-
-
 
 ### 海量微型对象的情况
 
@@ -62,16 +47,12 @@
 
 海量微型对象的影响，请看我曾经遇到过的这个问题：《[【笔记】对golang的大量小对象的管理真的是无语了……](https://www.cnblogs.com/ahfuzhang/p/15256614.html)》
 
-
-
 因此，海量微型对象的场景，这样解决：
 
 * 分配一大块数组，在数组中索引微型对象
 * 考虑fastcache这样的组件，通过堆外内存绕过GC
 
 当然，也有缺点：不好缩容。
-
-
 
 ### 大量小型对象的情况
 
@@ -83,15 +64,11 @@ sync.Pool不如上面的方法节省内存，但好处是可以缩容。
 
 * 注意：避免高频的从一个 sync.Pool 拿对象，这样相当于对所有协程加了一个锁。
 
-
-
 ### 数量可控的中型对象
 
 有的时候，我们可能需要一些定额数量的对象，并且对这些对象复用。
 
 这时可以使用channel来做内存池。需要时从channel取出，用完放回channel。
-
-
 
 ### slice的复用
 
@@ -102,8 +79,6 @@ fasthttp, VictoriaMetrics等组件的作者 [valyala](https://github.com/valyala
 这篇中文的总结也非常不错：《[fasthttp对性能的优化压榨](https://cctoctofx.netlify.app/post/golang/fasthttp/)》
 
 valyala大神还写了个 [bytebufferpool](https://github.com/valyala/bytebufferpool)，对`[]byte`重用的场景进行了封装。
-
-
 
 ## 避免容器空间动态增长
 
@@ -116,8 +91,6 @@ func xxx(){
 }
 ```
 
-
-
 ## 大神技巧：用slice代替map
 
 此技巧源于[valyala](https://github.com/valyala)大神。
@@ -128,8 +101,6 @@ func xxx(){
 2. 如果整个slice能够塞进CPU cache line，则其遍历可能比从内存load更加快速
 
 具体请见这篇：《[golang第三方库fasthttp为什么要使用slice而不是map来存储header？](https://www.zhihu.com/question/327580797)》
-
-
 
 ## 避免栈逃逸
 
@@ -148,41 +119,37 @@ func xxx() *ABigStruct{
 valyala大神的经验：先找出程序的hot path，然后在hot path上做栈逃逸的分析。尽量避免hot path上的堆内存分配，就能减轻GC压力，提升性能。
 
 > fasthttp首页上的介绍：
->
+> 
 > Fast HTTP package for Go. Tuned for high performance. **Zero memory allocations in hot paths.** Up to 10x faster than net/http
-
-
 
 这篇文章介绍了侦测栈逃逸的方法：
 
 > 验证某个函数的变量是否发生逃逸的方法有两个：
->
+> 
 > - go run -gcflags "-m -l" (-m打印逃逸分析信息，-l禁止内联编译)；例：
->
+> 
 > ```text
 > ➜  testProj go run -gcflags "-m -l" internal/test1/main.go
 > # command-line-arguments
 > internal/test1/main.go:4:2: moved to heap: a
 > internal/test1/main.go:5:11: main make([]*int, 1) does not escape
 > ```
->
+> 
 > - go tool compile -S main.go | grep runtime.newobject（汇编代码中搜runtime.newobject指令，该指令用于生成堆对象）,例：
->
+> 
 > ```text
 > ➜  testProj go tool compile -S internal/test1/main.go | grep newobject
 >         0x0028 00040 (internal/test1/main.go:4) CALL    runtime.newobject(SB)
 > ```
+> 
 > ——《[golang 逃逸分析详解](https://zhuanlan.zhihu.com/p/91559562)》
-
-
 
 逃逸的场景，这篇文章有详细的介绍：《[go逃逸场景有哪些](https://cloud.tencent.com/developer/article/1877008)》
 
-
-
-### 小心 `interface{}` 类型，`fmt.Sprintf()`, `fmt.Errorf()` 等位置的栈逃逸 
+### 小心 `interface{}` 类型，`fmt.Sprintf()`, `fmt.Errorf()` 等位置的栈逃逸
 
 以下简单的代码可能导致栈逃逸：
+
 ```go
 s := fmt.Sprintf("%d", 123)
 ```
@@ -194,6 +161,7 @@ s := fmt.Sprintf("%d", 123)
 对于性能敏感的场合，一定一定要做栈逃逸分析。
 
 ### Hot path 0 allocations 技巧
+
 Hotpath上如果做到没有任何内存分配，对性能的提升是非常明显的。
 可是处理业务逻辑时往往不得不在堆上创建对象，然后传递到别的函数中。
 但是在 RPC 等场景中，很多堆上的对象往往只在一次 request-response 期间存在。那么就可以把所有位置的这种变量放在一个结构中，然后复用这个结构。
@@ -233,27 +201,21 @@ func doSomething(ctx *MyContext){
 }
 ```
 
-
 # CPU使用层面的优化
-
-
 
 ## 声明使用多核
 
 强烈建议在main.go的import中加入下面的代码：
+
 ```go
 import _ "go.uber.org/automaxprocs"
 ```
 
 特别是在容器环境运行的程序，要让程序利用上所有的CPU核。
 
-
-
 在k8s的有的版本(具体记不得了)，会有一个恶心的问题：容器限制了程序只能使用比如2个核，但是`runtime.GOMAXPROCS(0)`代码却获取到了所有的物理核。这时就导致进程的物理线程数接近逻辑CPU的个数，而不是容器限制的核数。从而，大量的CPU时间消耗在物理线程切换上。我曾经在腾讯云上测试过，这种现象发生时，容器内单核性能只有物理机上单核性能的43%。
 
 因此，发现性能问题时，可以通过`ls /proc/$(pidof xxx)/tasks | wc`来查看进程的物理线程数，如果这个数量远远高于从容器要求的核数，那么在部署的时候建议加上环境变量来解决：`export -p GOMAXPROC=2`
-
-
 
 ## golang不适合做计算密集型的工作
 
@@ -268,11 +230,7 @@ import _ "go.uber.org/automaxprocs"
 
 因此，每个协程函数：在做IO操作的时候一定会切换回主循环，编译器也会在协程函数内编译进去可以切换上下文的代码。新版的golang runtime还存在强制调度的机制，如果某个正在执行的协程不会退出，会强制进行切换。
 
-
-
 由于存在协程切换的调度机制，golang是不适合做计算密集型的工作的。例如：音视频编解码，压缩算法等。以zstd压缩库为例，golang版本的性能不如cgo的版本，即便cgo调用存在一定开销。(我举的例子比较极端，当需要让golang的性能达到与C同一个级别时，标题的结论才成立。)
-
-
 
 ## 克制使用协程数
 
@@ -285,8 +243,6 @@ import _ "go.uber.org/automaxprocs"
 * 最合适情况：核心的工作协程的数量，与可用的CPU核数相当。
 * 区分IO协程和工作协程，把繁重的计算任务交给工作协程处理。
 
-
-
 ## 协程优先级机制
 
 关于优先级的案例，请参考我写的这篇文章：《[VictoriaMetrics中协程优先级的处理方式](https://www.cnblogs.com/ahfuzhang/p/15847860.html)》
@@ -295,11 +251,7 @@ import _ "go.uber.org/automaxprocs"
 
 **不能让调度器来均匀调度，不能创建更多的某类协程来获得争抢优势**。
 
-
-
 > 要深入理解golang的runtime，推荐阅读yifhao同学的这篇文章：《[万字长文带你深入浅出 Golang Runtime](https://cloud.tencent.com/developer/article/1548034)》
-
-
 
 # 并发层面
 
@@ -307,19 +259,13 @@ import _ "go.uber.org/automaxprocs"
 并发层面的问题是通用性的知识，与语言的特性并无直接的关系。本节列出golang中处理并发的惯用方法，已经对golang的并发处理很熟悉的同学可以跳过本小节。
 ```
 
-
-
 ## 锁
 
 关于锁的使用，VictoriaMetrics这个开源组件中有很多经典的案例。也可以移步参考这篇文章的总结：《[VictoriaMetrics中的golang代码优化方法](https://zhuanlan.zhihu.com/p/469239020)》(本人)
 
-
-
 ### 尽量不加锁
 
 以生产者-消费者模型为例：如果多个消费者之间可以做到互不关联的处理业务逻辑，那么应该尽量避免他们之间产生关联。其业务处理过程中需要的各个对象，宜各自一份。
-
-
 
 ### 对数据加锁，而不是对过程加锁
 
@@ -327,19 +273,13 @@ import _ "go.uber.org/automaxprocs"
 
 更进一步，如果存在多个冲突的变量，且在程序中不同的位置发生冲突，那么可以对特定的一组变量定义一个特定的锁，而不是使用一把统一的大锁来进行互斥——**尽量使用多个锁，让冲突进一步减小**。
 
-
-
 ### 读多写少的场景考虑读写锁
 
 某些读写的场景下，读是可以并发的，而写是互斥的。这种场景下，读写锁是比互斥锁更好的选择。
 
 例外的情况是：当某个对象，读很频繁，但是写只发生在整个对象更新的情况下，`atomic.Value` 是比读写锁更好的选择。
 
-
-
 ## 原子操作
-
-
 
 ### 基础的原子操作技巧
 
@@ -361,11 +301,7 @@ oldValue := atomic.SwapInt64(&value, 0) // 获取当前值，并清零
 
 原子操作就能搞定的并发场景，就不要再使用锁。
 
-
-
 还有一个优化点是：可以自己定义原子操作变量来代替程序中的 metrics 数据累加。比如 `github.com/prometheus/client_golang` 等库中，counter 对象的成本相对于原子操作还是更高的。因此，先把数据累加到自己的变量，再定期调用 metrics 上报 SDK 的 API，这样可以提升性能。
-
-
 
 ### 自旋锁
 
@@ -376,21 +312,17 @@ golang里面哪来的自旋锁？
 ```go
 var globalValue int64 = 0
 func xxx(newValue int64){
-	oldValue := atomic.LoadInt64(&globalValue)  // 相当于使用 memory barrier 指令，避免指令乱序
-	for !atomic.CompareAndSwapInt64(&globalValue, oldValue, newValue) {  // 自旋等待，直到成功
-		oldValue = atomic.LoadInt64(&globalValue)  // 失败后，说明那一瞬间值被修改了。需要重新获取最新的值
-		// 其他数值操作的准备
-	}  
+    oldValue := atomic.LoadInt64(&globalValue)  // 相当于使用 memory barrier 指令，避免指令乱序
+    for !atomic.CompareAndSwapInt64(&globalValue, oldValue, newValue) {  // 自旋等待，直到成功
+        oldValue = atomic.LoadInt64(&globalValue)  // 失败后，说明那一瞬间值被修改了。需要重新获取最新的值
+        // 其他数值操作的准备
+    }  
 }
 ```
 
 以上是无锁数据结构的经典套路。
 
-
-
 ## 并发容器
-
-
 
 ### sync.Map
 
@@ -398,15 +330,11 @@ func xxx(newValue int64){
 
 当然，我上述的观点的区分点是：这是业务程序还是系统程序，如果是系统程序，尽量不要用。我实际使用中发现，sync.Map会导致CPU消耗高，且GC压力增大。
 
-
-
 ### RoaringBitmap(或类似实现)
 
 对某些特定的场景，可以做到很少的锁，很小的内存，比如存储大量UINT64类型的集合这一点，RoaringBitmap是个非常好的选型。
 
 VictoriaMetrics中有一个RoaringBitmap实现的组件，叫做uint64set。具体介绍请见：《[vm中仿照RoaringBitmap的实现：uint64set](https://www.cnblogs.com/ahfuzhang/p/15900852.html)》(本人)。
-
-
 
 ### channel
 
@@ -445,8 +373,6 @@ func GetConfig() *Configs{
 }
 ```
 
-
-
 ### 引用计数
 
 有时候，很多子对象被引用来引用去，且嵌套的层次比较深。父对象也可能在使用期间动态的增减子对象。这种场景下，引用计数的方法能够很好的解决。
@@ -479,8 +405,6 @@ func (pw *partWrapper) decRef() {
 
 每个函数中，使用前调用对象的inRef()，使用完成后，调用deRef()。引用计数归零后会自动释放。
 
-
-
 ### 复制列表
 
 对于遍历子对象这类的场景，复制列表后再处理是较好的方法。特别是对象使用了map来作为子对象的容器，在并发场景下，遍历必然要加锁；如果遍历处理的时间很长，就会导致加锁的时间很长。这种情况下，把map的列表复制出来后再处理更好。以下例子仍然来自VictoriaMetrics:
@@ -501,11 +425,7 @@ func (tb *Table) getParts(dst []*partWrapper) []*partWrapper {  // 复制 table 
 }
 ```
 
-
-
 ## 其他
-
-
 
 ### 用sync.Once来懒惰初始化
 
@@ -522,11 +442,7 @@ func GetXXX() *XXX{
 }
 ```
 
-
-
 # 不安全代码
-
-
 
 ### string与[]byte的转换
 
@@ -534,24 +450,23 @@ string与slice的结构本质上是一样的，可以直接强制转换：
 
 ```go
 import (
-	"reflect"
-	"unsafe"
+    "reflect"
+    "unsafe"
 )
 
 // copy from prometheus source code
 
 // NoAllocString convert []byte to string
 func NoAllocString(bytes []byte) string {
-	return *(*string)(unsafe.Pointer(&bytes))
+    return *(*string)(unsafe.Pointer(&bytes))
 }
 
 // NoAllocBytes convert string to []byte
 func NoAllocBytes(s string) []byte {
-	strHeader := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	sliceHeader := reflect.SliceHeader{Data: strHeader.Data, Len: strHeader.Len, Cap: strHeader.Len}
-	return *(*[]byte)(unsafe.Pointer(&sliceHeader))
+    strHeader := (*reflect.StringHeader)(unsafe.Pointer(&s))
+    sliceHeader := reflect.SliceHeader{Data: strHeader.Data, Len: strHeader.Len, Cap: strHeader.Len}
+    return *(*[]byte)(unsafe.Pointer(&sliceHeader))
 }
-
 ```
 
 上面的代码可以避免string和[]byte在转换的时候发生拷贝。
@@ -562,6 +477,7 @@ func NoAllocBytes(s string) []byte {
 
 go 1.20 以后，已经提供了专门的方法来做这种转换。
 以下代码拷贝自fasthttp:
+
 ```go
 //go:build go1.20
 // +build go1.20
@@ -573,16 +489,14 @@ import "unsafe"
 // b2s converts byte slice to a string without memory allocation.
 // See https://groups.google.com/forum/#!msg/Golang-Nuts/ENgbUzYvCuU/90yGx7GUAgAJ .
 func B2s(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
+    return unsafe.String(unsafe.SliceData(b), len(b))
 }
 
 // s2b converts string to a byte slice without memory allocation.
 func S2b(s string) []byte {
-	return unsafe.Slice(unsafe.StringData(s), len(s))
+    return unsafe.Slice(unsafe.StringData(s), len(s))
 }
 ```
-
-
 
 ### 强制类型转换
 
@@ -594,23 +508,19 @@ func S2b(s string) []byte {
 package main
 
 import (
-	"testing"
-	"unsafe"
+    "testing"
+    "unsafe"
 )
 
 func TestConvert(t *testing.T) {
-	int64Slice := make([]int64, 0, 100)
-	int64Slice = append(int64Slice, 1, 2, 3)
-	uint64Slice := *(*[]uint64)(unsafe.Pointer(&int64Slice))
-	t.Logf("%+v", uint64Slice)
+    int64Slice := make([]int64, 0, 100)
+    int64Slice = append(int64Slice, 1, 2, 3)
+    uint64Slice := *(*[]uint64)(unsafe.Pointer(&int64Slice))
+    t.Logf("%+v", uint64Slice)
 }
 ```
 
-
-
 还有一种使用场景，要比较两个大数组是否完全一样：可以把数组强制转换为[]byte，然后使用bytes.Compare()。相当于C中的memcmp()函数。
-
-
 
 类似的操作还很多，推荐这篇文章：《[深度解密Go语言之unsafe](https://www.cnblogs.com/qcrao-2018/p/10964692.html)》
 
@@ -618,8 +528,6 @@ func TestConvert(t *testing.T) {
 模糊记得一个golang（或是rust）的原则：
 普通开发者可以使用安全代码来无顾虑的使用，高手把不安全代码包装成安全代码来提供高性能组件。
 ```
-
-
 
 ### 数组越界检查的开销
 
@@ -645,11 +553,13 @@ b := (*(*byte)(unsafe.Pointer(uintptr(unsafe.Pointer(&arr[0])) + uintptr(offset)
 ```
 
 可以使用编译器选项来提示哪些地方增加了边界检查的代码，请参考文章：
+
 * [Bounds Checking Elimination](https://docs.google.com/document/d/1vdAEAjYdzjnPA9WDOQ1e4e05cYVMpqSxJYZT33Cqw2g/edit#heading=h.ywknbkyeha6d)
   - 中文翻译：[深入理解Go之BCE优化](https://darjun.github.io/2018/05/07/bounds-check-elimination/)
 * [https://go101.org/article/bounds-check-elimination.html](https://go101.org/article/bounds-check-elimination.html)
 
 命令如下：
+
 ```
 go build -gcflags="-d=ssa/check_bce" pkg/cryptoutil/caesar.go                                  
 # command-line-arguments
@@ -663,35 +573,32 @@ pkg/cryptoutil/caesar.go:59:5: Found IsInBounds
 可以逐个查看，把循环内的边界检查转换为不安全代码的指针访问，从而优化性能。
 
 **甚至可以通过编译选项直接去掉边界检查**
+
 ```
 go build -gcflags="-B" xxx.go 
 ```
 
 # 编译/链接阶段
 
-
-
 ## 使用尽量新的golang版本
 
 理论上，每个新版的golang，都有一定编译器优化的提升。
 
-
-
 ## 编译参数
 
 > - -X importpath.name=value 编译期设置变量的值
->
+> 
 > - -s disable symbol table 禁用符号表
->
+> 
 > - -w disable DWARF generation 禁用调试信息
->
+>   
 >   ——《[golang编译参数ldflags](https://zhangsnow.com/go/golang%E7%BC%96%E8%AF%91%E5%8F%82%E6%95%B0ldflags.html)》
 
 ```
 go build -ldflags="-w -s" xxx.go
 ```
-我的其中一个项目，编译的时候去掉符号表后，性能提升了  1% 。
 
+我的其中一个项目，编译的时候去掉符号表后，性能提升了  1% 。
 
 ## 使用runtime中的非导出函数
 
@@ -726,8 +633,6 @@ golang的小函数默认就是内联的。
 
 > 可通过`-gcflags="-l"`选项全局禁用内联，与一个`-l`禁用内联相反，如果传递两个或两个以上的`-l`则会打开内联，并启用更激进的内联策略。
 
-
-
 ## 泛型
 
 golang 1.18正式发布了泛型。
@@ -740,18 +645,15 @@ golang 1.18正式发布了泛型。
 
 在整个团队的能力还没准备好迎接泛型以前，使用工具生产代码的`产生式编程`或许是更容易驾驭的方法。
 
-
 ## 代码生成 go generate
+
 [go generate](https://go.dev/blog/generate) 命令可以在go build之前调用工具来生成代码。
 自定义的工具可以使用go ast来解析代码，并在其中插入一些信息来达到”编译期计算“的效果。
 
 具体可以看我实现的这个例子：[file_line](https://github.com/ahfuzhang/file_line)，在编译期获得代码的行号，避免运行期的开销。
 结合具体的应用场景，编译期计算有非常多可以挖掘的优化点。
 
-
 # API使用
-
-
 
 ## 反射
 
@@ -765,13 +667,9 @@ golang 1.18正式发布了泛型。
 * 非得要用
   * 缓存反射的到的结果
 
-
-
 ```
 有的场景下，标准库提供的API不够好。下面列举一些自己认识的fast-xx组件。
 ```
-
-
 
 ## fasttime组件，低精度的time.Now()
 
@@ -781,13 +679,9 @@ golang 1.18正式发布了泛型。
 
 我测试过：性能比直接使用time.Now()快三倍左右。
 
-
-
 ## fastrand，绕开rand库的锁
 
 源码请见：https://github.com/valyala/fastrand
-
-
 
 ## 超长字符串输出的优化：quicktemplate
 
@@ -799,8 +693,6 @@ VictoriaMetrics中的vm-select就遇到了这个问题，当一个大查询需�
 
 具体代码请看：https://github.com/valyala/quicktemplate
 
-
-
 ## 其他
 
 总有很多人想把某个细分领域做到极致：
@@ -809,15 +701,9 @@ VictoriaMetrics中的vm-select就遇到了这个问题，当一个大查询需�
 * [fastpb](https://github.com/cloudwego/fastpb)
 * [sonic](https://github.com/bytedance/sonic) - json解析
 
-
-
 欢迎推荐更好好用的库给我，谢谢。
 
-
-
 # 其他高级主题
-
-
 
 ## 汇编/SIMD
 
@@ -835,8 +721,6 @@ golang使用plan 9汇编的语法，门槛还是比较高的。（经过半年�
 如果大家遇到更好的汇编翻译工具，请推荐给我。
 ```
 
-
-
 使用汇编的最佳理由是SIMD指令集。
 
 通常，一条指令只处理一条数据。而simd中，一条指令可以处理多条数据，当数据由多个128bit或者256bit构成的时候，使用SIMD指令可以取得较好的收益。
@@ -847,16 +731,14 @@ golang使用plan 9汇编的语法，门槛还是比较高的。（经过半年�
 
 推荐文章：《[golang 汇编](https://lrita.github.io/2017/12/12/golang-asm/)》
 
-
-
 ## JIT技术
 
 当前流行的OLAP数据库clickhouse为何性能如此卓绝？其两个核心技术点就是SIMD和JIT。
 
 > 在[计算机技术](https://zh.m.wikipedia.org/wiki/计算_(计算机科学))中，**即时编译**（英语：just-in-time compilation，缩写为**JIT**；又译**及时编译**[[1\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-1)、**实时编译**[[2\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-2)），也称为**动态翻译**或**运行时编译**[[3\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-3)，是一种执行[计算机代码](https://zh.m.wikipedia.org/wiki/计算机代码)的方法，这种方法涉及在程序执行过程中（在[执行期](https://zh.m.wikipedia.org/wiki/執行期)）而不是在执行之前进行[编译](https://zh.m.wikipedia.org/wiki/編譯器)。[[4\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-FOOTNOTEAycock2003-4)通常，这包括[源代码](https://zh.m.wikipedia.org/wiki/源代码)或更常见的[字节码](https://zh.m.wikipedia.org/wiki/字节码)到[机器码](https://zh.m.wikipedia.org/wiki/机器语言)的转换，然后直接执行。实现JIT编译器的系统通常会不断地分析正在执行的代码，并确定代码的某些部分，在这些部分中，编译或重新编译所获得的加速将超过编译该代码的开销。
->
+> 
 > JIT编译是两种传统的机器代码翻译方法——[提前编译](https://zh.m.wikipedia.org/w/index.php?title=提前编译&action=edit&redlink=1)（英语：[ahead-of-time compilation](https://en.wikipedia.org/wiki/ahead-of-time_compilation)）（AOT）和[解释](https://zh.m.wikipedia.org/wiki/直譯器)——的结合，它结合了两者的优点和缺点。[[4\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-FOOTNOTEAycock2003-4)大致来说，JIT编译，以解释器的开销以及编译和链接（解释之外）的开销，结合了编译代码的速度与解释的灵活性。JIT编译是[动态编译](https://zh.m.wikipedia.org/wiki/動態編譯)的一种形式，允许[自适应优化](https://zh.m.wikipedia.org/w/index.php?title=自适应优化&action=edit&redlink=1)（英语：[adaptive optimization](https://en.wikipedia.org/wiki/adaptive_optimization)），比如[动态重编译](https://zh.m.wikipedia.org/wiki/动态重编译)和特定于[微架构](https://zh.m.wikipedia.org/wiki/微架構)的加速[[nb 1\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-5)[[5\]](https://zh.m.wikipedia.org/zh-hans/即時編譯#cite_note-6)——因此，在理论上，JIT编译比静态编译能够产生更快的执行速度。解释和JIT编译特别适合于[动态编程语言](https://zh.m.wikipedia.org/wiki/动态语言)，因为运行时系统可以处理[后期绑定](https://zh.m.wikipedia.org/w/index.php?title=后期绑定&action=edit&redlink=1)（英语：[Late binding](https://en.wikipedia.org/wiki/Late_binding)）的数据类型并实施安全保证。
->
+> 
 > ——维基百科-[即时编译](https://zh.m.wikipedia.org/zh-hans/%E5%8D%B3%E6%99%82%E7%B7%A8%E8%AD%AF)
 
 JIT在JAVA圈耳熟能详，通常指把字节码编译为机器码。但是golang没有机器码，所以golang中JIT并不用于字节码翻译。
@@ -874,8 +756,6 @@ JIT在JAVA圈耳熟能详，通常指把字节码编译为机器码。但是gola
 ```
 
 也有golang库提供动态生成机器码的能力：https://github.com/goccy/go-jit。支持的指令有限，而且，猜测没人愿意这么写代码。
-
-
 
 （读者一定在想这么鸡肋的东西介绍给我干啥……）
 
@@ -904,27 +784,19 @@ type Data struct{
 
 针对类型`Data`，通过JIT产生一段最直接最高效的解析代码，并且以后都通过这段代码来解析。进而推演到每个类型都有专门的解析代码。如此：针对特定结构，有特定的最优解析代码。这样的做法绝对是最优的，无法被别的方法超越。
 
-
-
 就像ClickHouse一样，相信未来会有越来越多的系统应用会添置JIT的能力。
-
-
 
 ## CGO
 
 关于cgo的性能，我认为主要是golang runtime中的物理线程(GMP模型中的M)，与运行CGO的物理线程之间的通讯造成了远高于直接函数调用的损耗。
 
 > 内部显示 如果是单纯的 emtpy call，使用 cgo 耗时 55.9 ns/op， 纯 go 耗时  0.29 ns/op，相差了 192 倍。
->
+> 
 > 而实际上我们在使用 cgo 的时候不太可能进行空调用，一般来说会把性能影响较大，计算耗时较长的计算放在 cgo 中，如果是这种情况，每次调用额外 55.9 ns 的额外耗时应该是可以接受的访问。
->
+> 
 > ——[CGO 和 CGO 性能之谜](https://cloud.tencent.com/developer/article/1650525)
 
-
-
 可以说，CGO的调用本质上是线程间通讯，能否绕过这种开销呢？可以的！请看 [fastcgo](https://github.com/petermattis/fastcgo) 这个项目——通过汇编来调用某个c的函数指针，从而避免了线程间通讯。但是缺点就是一旦C函数中存在阻塞，会导致调度器阻塞。
-
-
 
 golang为了保障runtime的协程调度不被阻塞，就需要所有被调度的协程函数都是不阻塞的。一旦加入CGO，就无法保障函数不阻塞了，因此只有额外开辟物理线程来执行CGO的函数。
 
@@ -936,8 +808,6 @@ golang为了保障runtime的协程调度不被阻塞，就需要所有被调度�
 远多余可用核数的物理线程，会导致大量CPU时间消耗在无意义的线程切换上。建议运营中加上runtime的metric上报，一旦发现物理线程过多，定期重启来减少这种损耗。
 ```
 
-
-
 ## PGO([Profile-guided optimization](https://go.dev/doc/pgo))
 
 一般来说，编译器都是通过静态代码来生成二进制指令。这些指令与实际业务的运行情况可能是不相符的，特别的指令中的 hotpath 的分析。
@@ -945,8 +815,6 @@ golang为了保障runtime的协程调度不被阻塞，就需要所有被调度�
 如果对实际运行环境采集 profile 数据，再让编译器以 profile 数据为基准生成指令代码，这样就能够得到更加符合实际运行情况的更优的指令结构。
 
 关于 PGO 的优化，可以看看我这篇简单的实验：[玩一玩 golang 1.21 的 pgo 编译优化](https://www.cnblogs.com/ahfuzhang/p/17717513.html)
-
-
 
 ## 自己改编译器
 
@@ -956,12 +824,13 @@ golang为了保障runtime的协程调度不被阻塞，就需要所有被调度�
 
 通过硬件计数器来提升 pprof 的精度。通过深入研究编译器的细节，做特定场景做出比官方更优的编译器是完全可能的。
 
+## 使用特殊的编译器
 
+TinyGo (https://tinygo.org/) 这个项目让人眼前一亮：可以把go代码编译为在嵌入式设备上运行的二进制，或者生成更加精简和高效的X64可执行程序。
 
+本质上来说，它是沿用了go的语法，使用了自己的标准库和自己的编译器来达到目的。在一些特殊的场景，可以考虑引入这样的编译器来提升性能。（需要小心的是标准库的支持有限，且go的一般经验可能在这个编译器下不适用。）
 
 ## 其他的不高级主题
-
-
 
 ### panic
 
@@ -977,8 +846,6 @@ golang为了保障runtime的协程调度不被阻塞，就需要所有被调度�
 如果我们处处都想着加上recover()来捕获panic，是否意味着设计和测试上存在问题？
 ```
 
-
-
 ### for循环避免拷贝
 
 VictoriaMetrics中，几乎所有的for循环都是一种风格：
@@ -993,8 +860,6 @@ for i := range slice{
 
 我想这就是为了避免for循环中的第二个变量产生拷贝。就如同写C/C++的人，for循环中的循环变量要求写成 `++i` 而不是 `i++`。规范好写法，避免在细节之处有不必要的损耗。
 
-
-
 ### 内存对齐
 
 golang中声明的每个变量默认都是字节对齐的，这点很好。
@@ -1003,8 +868,6 @@ golang中声明的每个变量默认都是字节对齐的，这点很好。
 
 * 一个大的struct数组，要注意字节对齐带来的不必要消耗。内存敏感的话，调整字段的顺序以节约空间。
 * 一个大的struct数组，可以故意加些padding的字段，然后item尽可能的按照cache line的长度对齐，可以提升访问性能。
-
-
 
 ### 分支预测优化
 
@@ -1029,8 +892,6 @@ switch variable{
 }
 ```
 
-
-
 ### 根据可用内存来分配对象数量
 
 以prometheus为例，一个突然的大查询会导致耗满容器内存，然后引发OOM导致崩溃。作为系统软件，因为一个无法预估容量的大查询而导致自身崩溃，这一点是非常糟糕的。
@@ -1038,17 +899,15 @@ switch variable{
 相比之下，VictoriaMetrics中会先读取容器的可用内存，然后根据可用内存来分配对象的数量：
 
 ```go
-	maxBufSizePerStorageNode = memory.Allowed() / 8 / len(storageNodes)
-	if maxBufSizePerStorageNode > consts.MaxInsertPacketSize {
-		maxBufSizePerStorageNode = consts.MaxInsertPacketSize
-	}
+    maxBufSizePerStorageNode = memory.Allowed() / 8 / len(storageNodes)
+    if maxBufSizePerStorageNode > consts.MaxInsertPacketSize {
+        maxBufSizePerStorageNode = consts.MaxInsertPacketSize
+    }
 // memory.Allowed() 获取了容器内的可用内存
 // 除以8表示这个类型的对象，最多允许占用整个可用内存的八分之一(aka, 12.5%)
 ```
 
 强烈建议系统应用中学习一下VictoriaMetrics。具体实现代码请见：https://github.com/VictoriaMetrics/VictoriaMetrics/blob/cluster/lib/cgroup/mem.go
-
-
 
 ### 池化
 
@@ -1058,8 +917,6 @@ switch variable{
 * 对象池：参考第一章，不同的场景使用不同的对象池技巧。
 * 协程池：我认为要看场景。对一个特定的生产者消费者模式而言，协程数量与可用核数对齐是个好办法。其他的场景，要考虑管理协程和创建/销毁协程哪个的成本更高。大多数情况下，协程池这个设计比较鸡肋。
 * 连接池：似乎也没特别好说的，不过这篇分析文章让人耳目一新：《[Golang 黑魔法之 4 倍性能提升](https://jqs7.com/golang-black-magic-4x-app-faster/)》——每次都读完接收缓冲区的数据，使得连接池的复用率提升。
-
-
 
 ## 指导编译器生成cpu cache友好的代码
 
@@ -1094,14 +951,11 @@ func xxx(){
 }
 ```
 
-
-
-
-
-##  过时的技巧：压舱物ballast
+## 过时的技巧：压舱物ballast
 
 (从 go 1.17 以后，以下技巧已经没有用处了)
 下面一段神奇的代码，能够减少GC的频率，从而提升程序性能：
+
 ```go
 func main(){
     ballast := make([]byte, 10*1024*1024*1024)
@@ -1116,9 +970,6 @@ func main(){
 
 * [一个神奇的golang技巧：扩大heap内存来降低gc频率](https://www.cnblogs.com/ahfuzhang/p/15945013.html) (本人)
 * [Go Ballast 让内存控制更加丝滑](https://www.cnblogs.com/457220157-FTD/p/15567442.html)
-
-
-
 
 OK，文章到这里就结束了。
 
