@@ -326,7 +326,7 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 
 ## 一个大资料服务的实现
 
-<img src="file:///Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/资料服务.png" title="" alt="" data-align="center">
+<img src="./images/资料服务.png" title="" alt="" data-align="center">
 
 目前的团队中有一种元数据服务，为其他业务提供基础资料信息。其资料存储在 mongoDB 中，然后提供使用rpc 协议的微服务来对外提供元数据读写能力。一开始是直接读写mongoDB，随着业务量增加，对mongoDB 的访问压力增大，于是对 mongoDB 进行分片。业务量进一步扩展后，微服务上增加了localcache，以降低对 mongoDB 的压力。当业务的请求量继续扩大，请求到微服务上的量达到了 600万/s。这个服务最终在规格为 8 核的容器上部署了 2 万个实例，共计 16 万核。每容器是 4 GB 内存，共计 80TB 内存。
 
@@ -358,7 +358,7 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 
 ## 视频内容分析平台
 
-<img src="file:///Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/视频处理系统.drawio.png" title="" alt="" data-align="center">
+<img src="./images/视频处理系统.drawio.png" title="" alt="" data-align="center">
 
 团队中有一套视频处理系统，用于从视频中提取元数据/图像帧/音频帧等信息，并把这些信息用于人工审核和机器视觉等平台。
 
@@ -458,7 +458,7 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 
 ## 案例：以反微服务架构模式实现的计算系统
 
-![](/Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/反微服务架构_20241220.png)
+![](./images/反微服务架构_20241220.png)
 
 假定我们以上述的架构图实现了一个计算系统，那么这个系统有这样一些特点：
 
@@ -568,7 +568,7 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
   
   * 队列使用 eventfd 一类的机制来解决跨进程的事件通知
 
-<img src="file:///Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/ring_buffer.png" title="" alt="" data-align="center">
+<img src="./images/ring_buffer.png" title="" alt="" data-align="center">
 
 * 无锁：并非分配很多物理线程来跑满 CPU，而是通过业务专家的规划来做到无锁
 
@@ -601,8 +601,6 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
   
   - 多核编程中，通常按照数据并行或者任务并行的模式来使用多核。反微服务架构兼顾了数据并行和任务并行 —— 调度进程的每一条处理管线相当于任务并行，并且可以启动多条处理管线来做到数据并行。
 
-
-
 > 相关小知识链接：
 > 
 > * Per core 架构
@@ -610,8 +608,6 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 > * 管道-过滤器 架构模式
 > 
 > * FlatBuffer 数据序列化组件
-
- 
 
 ## 缺陷及其解决方案
 
@@ -651,7 +647,7 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 
    **Amdahl’s Law（阿姆达尔定律）**，它用于分析程序的并发加速性能。这个公式是：
 
- ![](/Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/2_amdahl_s_law.png)
+ ![](./images/2_amdahl_s_law.png)
 
  **含义：**
 
@@ -671,17 +667,15 @@ Twitter 原先采用微服务架构，将不同功能模块分散在多个服务
 
  • 当 n 趋于无穷 时，加速比的极限为：
 
- ![](/Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/2_amdahl_s_law_2.png)
+ ![](./images/2_amdahl_s_law_2.png)
 
  **举例：**
 
  如果程序的并行部分占比 P = 0.9，串行部分为 1 - P = 0.1，即使处理器数量无限增加，最大加速比为：
 
- ![](/Users/bytedance/code/github.com/ahfuzhang/life_of_mine/writings/反微服务架构-A%20Macro%20Services%20Framework/images/2_amdahl_s_law_3.png)
+ ![](./images/2_amdahl_s_law_3.png)
 
  因此，阿姆达尔定律强调了程序中串行部分对并行性能的限制。优化程序时，减少串行部分的比例 1-P 是提升并行性能的关键。
-
-
 
 ## Per core 架构
 
