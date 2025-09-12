@@ -17,9 +17,19 @@ ahfu, 阿福<br/>
 
 * Cnblogs: https://www.cnblogs.com/ahfuzhang
 
+* [Medium(English Blog)](https://medium.com/@ahfuzhang)
 
 
 ### 文章分享
+
+## 2025-06
+* [golang中写个字符串遍历谁不会？且看我如何提升50倍.md](./writings/golang中写个字符串遍历谁不会？且看我如何提升50倍/golang中写个字符串遍历谁不会？且看我如何提升50倍.md)
+
+## 2025-05
+* [后台服务器开发领域，还有什么值得爬的山.md](./writings/后台服务器开发领域，还有什么值得爬的山/后台服务器开发领域，还有什么值得爬的山.md)
+
+## 2024-11
+* [反微服务架构-A Macro Services Framework.md](./writings/反微服务架构-A%20Macro%20Services%20Framework/反微服务架构-A%20Macro%20Services%20Framework.md)
 
 ## 2024-03
 
@@ -27,7 +37,7 @@ ahfu, 阿福<br/>
   * 最早于 2013 年开始总结，从浅入深讲解海量后台开发的各种知识。
 
 * 更新《[用golang开发系统软件的总结](./writings/用golang开发系统软件的总结/用golang开发系统软件的总结.md)》
-
+* [源码阅读：VictoriaMetrics中的golang代码优化方法.md](./writings/源码阅读：VictoriaMetrics中的golang代码优化方法.md)
 
 
 ## Old
