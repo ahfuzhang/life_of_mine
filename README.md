@@ -23,7 +23,7 @@ ahfu, 阿福<br/>
 ### 文章分享
 
 #### 2025-09
-* [chatGPT 在招聘诈骗领域的应用](./writings/chatGPT 在招聘诈骗领域的应用/chatGPT 在招聘诈骗领域的应用.md)
+* [ChatGPT 在招聘诈骗领域的应用]("./writings/chatGPT 在招聘诈骗领域的应用/chatGPT 在招聘诈骗领域的应用.md")
 
 #### 2025-06
 
