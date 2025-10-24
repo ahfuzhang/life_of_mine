@@ -22,6 +22,9 @@ ahfu, 阿福<br/>
 
 ### 文章分享
 
+#### 2025-10
+* [VictoriaLogs 运营数据分享](https://github.com/ahfuzhang/life_of_mine/blob/master/writings/VictoriaLogs%20%E8%BF%90%E8%90%A5%E6%95%B0%E6%8D%AE%E5%88%86%E4%BA%AB/VictoriaLogs%20%E8%BF%90%E8%90%A5%E6%95%B0%E6%8D%AE%E5%88%86%E4%BA%AB.md)
+
 #### 2025-09
 * [ChatGPT 在招聘诈骗领域的应用](./writings/chatGPT%20%E5%9C%A8%E6%8B%9B%E8%81%98%E8%AF%88%E9%AA%97%E9%A2%86%E5%9F%9F%E7%9A%84%E5%BA%94%E7%94%A8/chatGPT%20%E5%9C%A8%E6%8B%9B%E8%81%98%E8%AF%88%E9%AA%97%E9%A2%86%E5%9F%9F%E7%9A%84%E5%BA%94%E7%94%A8.md)
 
