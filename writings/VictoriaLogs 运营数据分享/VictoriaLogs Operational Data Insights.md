@@ -30,7 +30,7 @@ Since no queries were executed at this specific time point, it primarily reflect
 # Configuration
 
 | Category       | Configuration Item    | Value    | Description                                                         |
-| ---------- | --------- | ------- | ------------------------------------------ ------------------ |
+| ---------- | --------- | ------- | ------------------------------------------------------------ |
 | Server Resource      | CPU cores      | 48      | The metric vm_concurrent_insert_capacity value is 96,<br />reflecting the upper limit of write concurrency |
 |                        | Memory      | 64 GB      |                                                              |
 |            | Disk      | 16TB    |                                                              |
@@ -43,7 +43,7 @@ Since no queries were executed at this specific time point, it primarily reflect
 
 ## CPU
 | Data Item   | Value    | Description                                                         |
-| -------- | ------- | --------------------------------------------------- --------- |
+| -------- | ------- | ------------------------------------------------------------ |
 | CPU Usage | 25.1 cores | 52.3% of total CPU cores<br />The metric is process_cpu_seconds_total.<br />The container_cpu_usage_seconds_total metric reports 25.6 cores; use  container's internal measurement here. |
 | Threads | 139 | Excessive threads due to use cgo when using zstd library. |
 | Goroutines | 101 | Goroutine count lower than threads. Indicates very restrained goroutine usage. Well done! |
@@ -77,7 +77,7 @@ With an average allocation of only about 40 MB per second, this indicates extens
 Storage bases Alibaba Cloud's VPC.
 
 | Data Item      | Value            | Description                                                         |
-| -------- | ------- | ----------------------------------------------------------- - |
+| -------- | ------- | ------------------------------------------------------------ |
 | Used Disk Space | 12372666871808 bytes<br />11.25 T | 70.3% of total space |
 | Handle Count | 5230 | Cannot distinguish file fds and sockets at this time |
 | Total Dropped Rows | 0 | Indicates no log loss has ever occurred |
@@ -94,7 +94,7 @@ Storage bases Alibaba Cloud's VPC.
 ## Network
 
 | Data Item   | Value    | Description                                                         |
-| -------- | ------- | ----------------------------------------------- ------------- |
+| -------- | ------- | ------------------------------------------------------------ |
 | Network Inbound | 520 MB/S | From metric container_network_receive_bytes_total |
 | Network Outbound | 124 KB/S | From metric container_network_transmit_bytes_total |
 | Log Data Ingest Rate | 465881848 bytes/s<br />444.3 MB/S | From metric vl_bytes_ingested_total |
@@ -103,7 +103,7 @@ Storage bases Alibaba Cloud's VPC.
 ## Ingestion Rate
 
 | Data Item      | Value            | Description                                                         |
-| -------- | ------- | --------------------------------------------- --------------- |
+| -------- | ------- | ------------------------------------------------------------ |
 | Logs received rate | 491,641 rows/s | From metric vl_rows_ingested_total |
 | insert_processors_count | 11 | Number of concurrent coroutines writing logs |
 | vl_too_long_lines_skipped_total | 0 | No data discarded during writing |
@@ -114,7 +114,7 @@ Storage bases Alibaba Cloud's VPC.
 In VictoriaLogs, fields designated as `StreamFields` are written to the index.
 
 | Data Item      | Value            | Description                                                         |
-| -------- | ------- | --------------------------- --------------------------------- |
+| -------- | ------- | ------------------------------------------------------------ |
 | Log ingestion rate | 491,641 entries/s | From metric vl_rows_ingested_total |
 | Indexed rows | 83,180 | From metric vl_indexdb_rows |
 | Indexed disk capacity | 2601009 bytes<br />2.48 mb | vl_data_size_bytes{type=“indexdb”} |
@@ -126,7 +126,7 @@ In VictoriaLogs, fields designated as `StreamFields` are written to the index.
 All `tags` and `_msg` fields in the logs, along with their associated `bloom filter bitmaps`, are written to the data section of VictoriaLogs.
 
 | Data Item      | Value            | Description                                                         |
-| -------- | ------- | ----------------------------------------------------------- - |
+| -------- | ------- | ------------------------------------------------------------ |
 | Big partition log entries | 204037001713 | vl_storage_rows{type=“storage/big”} |
 | Small partition log entries | 699306811 | vl_storage_rows{type=“storage/small”} |
 | Inmemory log entries | 13792407 | vl_storage_rows{type=“storage/inmemory”} |
@@ -136,7 +136,7 @@ All `tags` and `_msg` fields in the logs, along with their associated `bloom fil
 ## Merge-related Metrics
 
 | Data Item      | Value                | Description                                                         |
-| -------- | ------- | ----------------------------------------------------------- - |
+| -------- | ------- | ------------------------------------------------------------ |
 | Merge concurrency: storage/inmemory | 13 | Equivalent to writing in-memory cached blocks to disk.<br />Metric: vm_concurrent_insert_current |
 | Merge concurrency: storage/big | 3 |   |
 | Merge concurrency: storage/small | 2 |   |
