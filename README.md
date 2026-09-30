@@ -22,6 +22,11 @@ ahfu, 阿福<br/>
 
 ### 文章分享
 
+#### 2026
+
+* [为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉](writings/为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉/为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉.md)
+* [一个地狱笑话看大模型的推理机制](writings/从一个地狱笑话看大模型的推理机制/从一个地狱笑话看大模型的推理机制.md)
+
 #### 2025-10
 * [VictoriaLogs 运营数据分享](https://github.com/ahfuzhang/life_of_mine/blob/master/writings/VictoriaLogs%20%E8%BF%90%E8%90%A5%E6%95%B0%E6%8D%AE%E5%88%86%E4%BA%AB/VictoriaLogs%20%E8%BF%90%E8%90%A5%E6%95%B0%E6%8D%AE%E5%88%86%E4%BA%AB.md)
 
