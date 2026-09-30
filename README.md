@@ -24,7 +24,7 @@ ahfu, 阿福<br/>
 
 #### 2026
 
-* [为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉](writings/为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉/为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉.md)
+* [为什么我的想法可能不靠谱？——重读〈The Bitter Lesson〉](./writings/%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E7%9A%84%E6%83%B3%E6%B3%95%E5%8F%AF%E8%83%BD%E4%B8%8D%E9%9D%A0%E8%B0%B1%EF%BC%9F%E2%80%94%E2%80%94%E9%87%8D%E8%AF%BB%E3%80%88The%20Bitter%20Lesson%E3%80%89/%E4%B8%BA%E4%BB%80%E4%B9%88%E6%88%91%E7%9A%84%E6%83%B3%E6%B3%95%E5%8F%AF%E8%83%BD%E4%B8%8D%E9%9D%A0%E8%B0%B1%EF%BC%9F%E2%80%94%E2%80%94%E9%87%8D%E8%AF%BB%E3%80%88The%20Bitter%20Lesson%E3%80%89.md)
 * [一个地狱笑话看大模型的推理机制](writings/从一个地狱笑话看大模型的推理机制/从一个地狱笑话看大模型的推理机制.md)
 
 #### 2025-10
